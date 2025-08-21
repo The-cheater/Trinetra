@@ -1,6 +1,6 @@
 # TRINETRA - Community Safety
 
-Modern mobile-first web app built with React + Vite. The app opens with an intro video, then flows to authentication (Signup/Login), followed by the main experience: Urban Thread (home feed of city incidents), Maps, Contribute, and Profile.
+Modern mobile-first web app built with Next.js (App Router). The app opens with an intro video, then flows to authentication (Signup/Login), followed by the main experience: Urban Thread (home feed of city incidents), Maps, Contribute, and Profile.
 
 ## 🚀 Features
 
@@ -38,9 +38,8 @@ Modern mobile-first web app built with React + Vite. The app opens with an intro
 
 ## 🛠️ Tech Stack
 
+- **Next.js 14 (App Router)** - File-based routing, SSR/SSG
 - **React 18** - Modern React with hooks
-- **Vite** - Fast build tool and development server
-- **React Router DOM** - Client-side routing
 - **Framer Motion** - Smooth animations and transitions
 - **Lucide React** - Beautiful, customizable icons
 - **CSS Variables** - Consistent theming system
@@ -48,11 +47,12 @@ Modern mobile-first web app built with React + Vite. The app opens with an intro
 ## 🎨 Design System
 
 ### Theme System
-The app features a comprehensive light/dark mode system:
+The app features a comprehensive light/dark mode system (default is Dark):
 
-- **Automatic Detection**: Respects system preference on first visit
-- **Manual Toggle**: Theme toggle button in navigation and headers
-- **Persistent Storage**: Remembers user's theme choice
+- **Default: Dark** via SSR attribute on `<html data-theme="dark">` in `app/layout.tsx`
+- **Automatic Detection**: First load respects saved preference; system dark is used if no prior choice
+- **Manual Toggle**: Provided by `ThemeProvider` in `app/contexts/ThemeContext.tsx`
+- **Persistent Storage**: Remembers user's theme choice in `localStorage`
 - **Smooth Transitions**: Animated theme switching with Framer Motion
 
 ### Color Palette
@@ -91,7 +91,7 @@ The app features a comprehensive light/dark mode system:
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd community-safety-app
+   cd trinetra-nextjs
    ```
 
 2. **Install dependencies**
@@ -105,30 +105,37 @@ The app features a comprehensive light/dark mode system:
    ```
 
 4. **Open in browser**
-   - Navigate to `http://localhost:5173`
+   - Navigate to `http://localhost:3000`
    - Use browser dev tools to simulate iPhone dimensions (414px width)
 
-## 📁 Project Structure
+## 📁 Project Structure (Next.js App Router)
 
 ```
-src/
+app/
 ├── components/
-│   ├── BottomNavigation.jsx
-│   ├── Logo.jsx
-│   └── ThemeToggle.jsx
+│   ├── StackedDialog.tsx
+│   ├── PopoverForm.tsx
+│   └── VideoLanding.tsx
 ├── contexts/
-│   └── ThemeContext.jsx
+│   └── ThemeContext.tsx
 ├── pages/
-│   ├── Login.jsx
-│   ├── Signup.jsx
-│   ├── Map.jsx           # Maps
-│   ├── UrbanThread.jsx  # Home feed
-│   ├── Contribute.jsx
-│   ├── Profile.jsx
-│   └── ContributionType.jsx
-├── App.jsx
-├── App.css
-└── main.jsx
+│   ├── Login.tsx
+│   ├── Signup.tsx
+│   ├── Map.tsx
+│   ├── UrbanThread.tsx
+│   ├── Contribute.tsx
+│   ├── Profile.tsx
+│   ├── EditProfile.tsx
+│   ├── PrivacySettings.tsx
+│   └── ContributionType.tsx
+├── globals.css
+├── layout.tsx            # Root layout, sets SSR default theme to dark
+└── page.tsx              # App entry, wires providers and navigation
+
+public/
+├── favicon.ico
+├── logo.png
+└── videos/lv_0_20250814213236.mp4
 ```
 
 ## 🎯 Key Features Explained
@@ -178,13 +185,12 @@ src/
 
 ## 🔧 Customization
 
-### Adding New Pages
-1. Create component in `src/pages/`
-2. Add route in `src/App.jsx`
-3. Update navigation if needed
+### Adding New Pages (Next.js)
+1. Create a new file under `app/pages/YourPage.tsx`
+2. Wire it in `app/page.tsx` navigation/state if part of SPA-like flow
 
 ### Styling
-- Modify CSS variables in `src/App.css`
+- Modify CSS variables in `app/globals.css`
 - Use consistent color palette
 - Follow component patterns
 
@@ -200,10 +206,14 @@ src/
 npm run build
 ```
 
-### Deploy to Vercel/Netlify
-1. Connect repository to deployment platform
-2. Set build command: `npm run build`
-3. Set output directory: `dist`
+### Run Production Build
+```bash
+npm start
+```
+
+### Deploy
+- Recommended: **Vercel** (zero-config for Next.js)
+- Static export (if applicable) uses `next export` to `out/` (not currently configured)
 
 ## 🔮 Future Enhancements
 
@@ -225,6 +235,14 @@ npm run build
 - Social sharing
 - Community moderation tools
 
+## 🧭 Migration Notes
+
+During migration from React + Vite to Next.js:
+
+- Legacy artifacts removed: `src/`, `vite.config.js`, `index.html`, `public/vite.svg`, `icon.ico`
+- Default theme set to Dark via `app/layout.tsx` and `ThemeContext.tsx`
+- Added `[data-theme='dark']` overrides in `app/globals.css` to prevent light-theme flash
+
 ## 📄 License
 
 This project is licensed under the MIT License.
@@ -243,4 +261,12 @@ For questions or support, please open an issue in the repository.
 
 ---
 
-**Built with ❤️ using React + Vite**
+**Built with ❤️ using Next.js**
+
+---
+
+### Video Size Tweaks
+- Update sizes in `app/globals.css`:
+  - `.video-landing` controls the section height (e.g., `85vh`)
+  - `.video-container` controls the video box size (`width`, `height`, `max-width`)
+- For aspect ratio control, set `aspect-ratio: 16 / 9; height: auto;` on `.landing-video` and size via container width.
