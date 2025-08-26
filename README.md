@@ -1,272 +1,381 @@
-# TRINETRA - Community Safety
 
-Modern mobile-first web app built with Next.js (App Router). The app opens with an intro video, then flows to authentication (Signup/Login), followed by the main experience: Urban Thread (home feed of city incidents), Maps, Contribute, and Profile.
+# TRINETRA: AI Agent For Urban Community  
 
-## 🚀 Features
+## 🌟 Overview
 
-### Core Functionality
-- **Splash Screen**: Animated logo with smooth transitions
-- **Authentication**: Login/Signup with form validation
-- **Interactive Map**: Google Maps integration for location-based services
-- **Incident Reporting**: Comprehensive form for reporting traffic incidents, road hazards, and construction work
-- **Community Feed**: Real-time notifications and community reports
-- **User Profile**: Statistics, report history, and account management
+TRINETRA is a modern, full-stack civic technology platform that empowers citizens to report, verify, and engage with urban incidents in real-time. The platform combines a sleek Next.js frontend with a robust Node.js backend to create a seamless community-driven safety ecosystem.
 
-### Design Features
-- **iPhone Dimensions**: Optimized for 414px width (iPhone 12/13/14)
-- **HackOdisha Inspired**: Purple gradient theme with bold typography
-- **Light/Dark Mode**: Complete theme system with automatic detection and manual toggle
-- **Smooth Animations**: Framer Motion powered transitions
-- **Responsive Design**: Mobile-first approach with touch-friendly interfaces
-- **Modern UI**: Clean, accessible design with proper contrast ratios
+***
 
-## 📱 Pages & Navigation
+## 🎯 Frontend - Next.js Application
 
-### Authentication Flow
-1. **Splash Screen** - Animated logo and loading screen
-2. **Login** - Email/password authentication
-3. **Signup** - User registration with validation
+### Description
 
-### Main App Navigation
-- **Urban Thread** - Priority-sorted incident feed with filters and upvotes
-- **Maps** - Search, route options, stats, and recent activity
-- **Contribute** - Incident reporting with category selection
-- **Profile** - User stats, history, and settings
+A mobile-first, responsive web application built with Next.js 14 (App Router) providing an intuitive interface for community safety engagement. Features smooth animations, real-time updates, and comprehensive theme support.
 
-### Child Pages
-- **Contribution Type Selection** - Choose incident category before reporting
+### ✨ Key Features
 
-## 🛠️ Tech Stack
+- **Splash Screen**: Animated logo with video introduction
+- **Authentication System**: Secure signup/login with JWT integration
+- **Urban Thread Feed**: Real-time community incident reports with filtering and reactions
+- **Interactive Maps**: Google Maps integration with smart routing (fastest/eco/safest routes)
+- **Incident Reporting**: Photo upload, geolocation, and category-based incident submission
+- **User Profiles**: Statistics, contribution history, reputation system, and settings
+- **Theme System**: Light/Dark mode with smooth transitions and persistent storage
+- **Responsive Design**: Optimized for mobile-first usage
 
-- **Next.js 14 (App Router)** - File-based routing, SSR/SSG
-- **React 18** - Modern React with hooks
-- **Framer Motion** - Smooth animations and transitions
-- **Lucide React** - Beautiful, customizable icons
-- **CSS Variables** - Consistent theming system
 
-## 🎨 Design System
+### 🛠️ Frontend Technologies
 
-### Theme System
-The app features a comprehensive light/dark mode system (default is Dark):
+- **Next.js 14** with App Router for optimal performance and SSR
+- **React 18** with modern hooks and functional components
+- **TypeScript** for type safety and better developer experience
+- **Framer Motion** for smooth animations and micro-interactions
+- **Lucide React** for consistent, beautiful iconography
+- **CSS Custom Properties** for comprehensive theming system
 
-- **Default: Dark** via SSR attribute on `<html data-theme="dark">` in `app/layout.tsx`
-- **Automatic Detection**: First load respects saved preference; system dark is used if no prior choice
-- **Manual Toggle**: Provided by `ThemeProvider` in `app/contexts/ThemeContext.tsx`
-- **Persistent Storage**: Remembers user's theme choice in `localStorage`
-- **Smooth Transitions**: Animated theme switching with Framer Motion
 
-### Color Palette
-- **Primary**: `#7920D0` (Purple)
-- **Secondary**: `#D3AEFF` (Light Purple)
-- **Accent**: `#FFD32B` (Yellow)
-- **Background**: `#BC82FE` (Gradient Purple)
-- **Text**: `#000000` (Black)
-- **White**: `#FFFFFF`
-
-#### Dark Mode Colors
-- **Background**: `#000000` (Black)
-- **Secondary Background**: `#16181C` (Dark Gray)
-- **Border**: `#2F3336` (Dark Border)
-- **Text**: `#E7E9EA` (Light Text)
-- **Secondary Text**: `#71767B` (Gray Text)
-
-### Typography
-- **Font Family**: Inter, system fonts
-- **Weights**: 400 (Regular), 600 (Semibold), 700 (Bold), 800 (Extrabold)
-
-### Components
-- **Cards**: Rounded corners with borders
-- **Buttons**: Hover effects with scale animations
-- **Forms**: Icon-prefixed inputs with validation
-- **Navigation**: Bottom tab bar with active states
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd trinetra-nextjs
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open in browser**
-   - Navigate to `http://localhost:3000`
-   - Use browser dev tools to simulate iPhone dimensions (414px width)
-
-## 📁 Project Structure (Next.js App Router)
+### 📁 Frontend Structure
 
 ```
 app/
-├── components/
-│   ├── StackedDialog.tsx
-│   ├── PopoverForm.tsx
-│   └── VideoLanding.tsx
-├── contexts/
-│   └── ThemeContext.tsx
-├── pages/
-│   ├── Login.tsx
-│   ├── Signup.tsx
-│   ├── Map.tsx
-│   ├── UrbanThread.tsx
-│   ├── Contribute.tsx
-│   ├── Profile.tsx
-│   ├── EditProfile.tsx
-│   ├── PrivacySettings.tsx
-│   └── ContributionType.tsx
-├── globals.css
-├── layout.tsx            # Root layout, sets SSR default theme to dark
-└── page.tsx              # App entry, wires providers and navigation
+├── components/     # Reusable UI components (buttons, forms, modals)
+├── contexts/       # React Context providers (Theme, Auth)  
+├── hooks/          # Custom React hooks (useAuth, useLocation)
+├── lib/            # API service layer and utilities
+├── pages/          # Application routes and page components
+├── types/          # TypeScript interfaces and type definitions
+├── globals.css     # Global styles and CSS variables
+├── layout.tsx      # Root layout with providers
+└── page.tsx        # Main entry point
 
-public/
-├── favicon.ico
-├── logo.png
-└── videos/lv_0_20250814213236.mp4
+Configuration Files:
+├── next.config.js  # Next.js configuration and API proxy
+├── .env.local      # Environment variables
+├── tsconfig.json   # TypeScript configuration
+└── package.json    # Dependencies and scripts
 ```
 
-## 🎯 Key Features Explained
 
-### 1. Splash Screen
-- Animated logo with pulse effect
-- Smooth fade-in transitions
-- 3-second loading simulation
+### 🚀 Frontend Setup
 
-### 2. Authentication
-- Form validation with real-time feedback
-- Password visibility toggle
-- Loading states for better UX
-- Responsive design for all screen sizes
+```bash
+# Install dependencies
+npm install
 
-### 3. Map Page
-- Interactive map placeholder (ready for Google Maps API)
-- Route options (Fastest, Eco, Safety)
-- Community statistics
-- Recent activity feed
+# Start development server
+npm run dev
 
-### 4. Contribute Page
-- Category selection with visual feedback
-- Severity slider with labels
-- Location input with geolocation support
-- Photo upload capability
-- Form validation and submission
+# Build for production
+npm run build
 
-### 5. Urban Thread (Home)
-- Filterable community reports with category and severity
-- Upvote/comment/share actions
-- Priority badges with P scores
-- Real-time styling and animations
+# Access application
+http://localhost:3000
+```
 
-### 6. Profile Page
-- User statistics dashboard
-- Report history with status indicators
-- Account settings
-- Community ranking system
 
-### 7. Theme System
-- Light and dark mode support
-- Automatic system preference detection
-- Manual theme toggle in navigation
-- Persistent theme storage
-- Smooth animated transitions
+***
 
-## 🔧 Customization
+## ⚡ Backend - Node.js API Server
 
-### Adding New Pages (Next.js)
-1. Create a new file under `app/pages/YourPage.tsx`
-2. Wire it in `app/page.tsx` navigation/state if part of SPA-like flow
+### Description
 
-### Styling
-- Modify CSS variables in `app/globals.css`
-- Use consistent color palette
-- Follow component patterns
+A RESTful API server built with Node.js and Express, providing secure authentication, incident management, real-time data verification, and comprehensive user management. Features intelligent confidence scoring and external API integrations.
 
-### Animations
-- Use Framer Motion for smooth transitions
-- Maintain consistent timing (0.3s-0.6s)
-- Add hover and tap effects
+### ✨ Key Features
+
+- **JWT Authentication**: Secure user registration, login, and session management
+- **Incident Management**: CRUD operations with geospatial queries and location filtering
+- **Confidence Scoring**: AI-powered verification using SerpAPI for real-time validation
+- **Community Features**: Comments system, user profiles, and reputation tracking
+- **Route Planning**: Multi-modal routing (fastest, eco-friendly, safest) with cost estimation
+- **File Handling**: Secure photo/video upload and storage system
+- **Rate Limiting**: Protection against abuse and spam
+- **Data Validation**: Comprehensive request validation and sanitization
+
+
+### 🛠️ Backend Technologies
+
+- **Node.js** with Express.js for the API server
+- **MongoDB** with Mongoose ODM for data persistence
+- **JSON Web Tokens (JWT)** for secure authentication
+- **Multer** for file upload handling
+- **Express Rate Limit** for API protection
+- **SerpAPI Integration** for real-time data verification
+- **Geospatial Queries** for location-based features
+
+
+### 📁 Backend Structure
+
+```
+backend/
+├── controllers/    # Request handlers and business logic
+│   ├── authController.js      # Authentication logic
+│   ├── contributeController.js # Incident reporting
+│   ├── threadsController.js   # Community feed
+│   ├── profileController.js   # User management
+│   └── routesController.js    # Route planning
+├── models/         # MongoDB schemas
+│   ├── User.js     # User model with location support
+│   ├── Post.js     # Incident reports with TTL
+│   └── Comment.js  # Community comments
+├── routes/         # API endpoint definitions
+├── middleware/     # Authentication and validation
+├── utils/          # Helper functions and integrations
+│   ├── confidence.js # AI-powered verification engine
+│   └── storage.js    # File handling utilities
+├── uploads/        # Temporary file storage
+├── config/         # Database configuration
+├── server.js       # Application entry point
+└── .env           # Environment variables
+```
+
+
+### 🚀 Backend Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your database URL and API keys
+
+# Start server
+node server.js
+
+# Access API
+http://localhost:8080
+```
+
+
+***
+
+## 🔧 Environment Configuration
+
+### Frontend (.env.local)
+
+```env
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_APP_NAME=UrbanThreads
+NEXT_PUBLIC_APP_VERSION=1.0.0
+
+# API Keys
+NEXT_PUBLIC_SERPAPI_KEY=your_serpapi_key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_maps_key
+
+# Feature Flags
+NEXT_PUBLIC_ENABLE_LOCATION_SERVICES=true
+NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD=true
+NEXT_PUBLIC_DEBUG_MODE=true
+```
+
+
+### Backend (.env)
+
+```env
+# Server Configuration
+PORT=8080
+NODE_ENV=development
+
+# Database
+MONGODB_URI=mongodb://127.0.0.1:27017/TRINETRA
+
+# Authentication
+JWT_SECRET=your_secure_jwt_secret
+
+# API Keys
+SERPAPI_KEY=your_serpapi_key
+
+# File Upload
+MAX_FILE_SIZE=5000000
+UPLOAD_PATH=./uploads
+```
+
+**⚠️ Security Note**: Never commit `.env` files with production secrets to version control!
+
+***
+
+## 🔄 API Integration
+
+The frontend and backend communicate through a proxy configuration in `next.config.js`:
+
+```javascript
+async rewrites() {
+  return [
+    {
+      source: '/api/:path*',
+      destination: 'http://localhost:8080/api/:path*'
+    }
+  ]
+}
+```
+
+
+### Key API Endpoints
+
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User authentication
+- `GET /api/threads` - Get community incidents with location filtering
+- `POST /api/contribute` - Submit incident reports
+- `GET /api/profile/me` - Get user profile and statistics
+- `POST /api/routes` - Calculate optimal routes
+
+***
 
 ## 🚀 Deployment
 
-### Build for Production
+### Frontend Deployment
+
+**Recommended: Vercel**
+
 ```bash
-npm run build
+# Connect your GitHub repository to Vercel
+# Configure environment variables in Vercel dashboard
+# Automatic deployments on push to main branch
 ```
 
-### Run Production Build
+**Alternative: Traditional Hosting**
+
 ```bash
+npm run build
 npm start
 ```
 
-### Deploy
-- Recommended: **Vercel** (zero-config for Next.js)
-- Static export (if applicable) uses `next export` to `out/` (not currently configured)
 
-## 🔮 Future Enhancements
+### Backend Deployment
 
-### Backend Integration
-- Firebase Authentication
-- Firestore for data storage
-- Real-time updates
-- Image upload to Firebase Storage
+**Options: Heroku, AWS, DigitalOcean, Railway**
 
-### Map Integration
-- Google Maps JavaScript API
-- Real-time traffic data
-- Route optimization
-- Location-based services
+```bash
+# For Heroku
+git push heroku main
 
-### Advanced Features
-- Push notifications
-- Offline support
-- Social sharing
-- Community moderation tools
+# For Docker
+docker build -t trinetra-backend .
+docker run -p 8080:8080 trinetra-backend
+```
 
-## 🧭 Migration Notes
 
-During migration from React + Vite to Next.js:
+### Production Checklist
 
-- Legacy artifacts removed: `src/`, `vite.config.js`, `index.html`, `public/vite.svg`, `icon.ico`
-- Default theme set to Dark via `app/layout.tsx` and `ThemeContext.tsx`
-- Added `[data-theme='dark']` overrides in `app/globals.css` to prevent light-theme flash
+- [ ] Update API URLs in environment variables
+- [ ] Configure HTTPS for both frontend and backend
+- [ ] Set up MongoDB Atlas for production database
+- [ ] Configure CORS for production domains
+- [ ] Set up monitoring and logging
+- [ ] Configure rate limiting for production load
 
-## 📄 License
+***
 
-This project is licensed under the MIT License.
+## 🔒 Security Features
+
+- **JWT Authentication**: Secure token-based authentication
+- **Rate Limiting**: API protection against abuse
+- **Input Validation**: Comprehensive request sanitization
+- **File Upload Security**: Safe handling of user uploads
+- **CORS Configuration**: Proper cross-origin resource sharing
+- **Environment Variables**: Secure configuration management
+
+***
+
+## 🧪 Testing
+
+### Frontend Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Test build
+npm run build
+```
+
+
+### Backend Testing
+
+```bash
+# Test API endpoints
+npm test
+
+# Test with specific environment
+NODE_ENV=test npm test
+```
+
+
+***
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
+We welcome contributions! Please follow these steps:
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Follow** existing code style and patterns
+4. **Add** tests for new functionality
+5. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+6. **Push** to the branch (`git push origin feature/amazing-feature`)
+7. **Open** a Pull Request
+
+### Development Guidelines
+
+- Write clear, descriptive commit messages
+- Add comments for complex logic
+- Follow TypeScript best practices
+- Test thoroughly before submitting
+- Update documentation as needed
+
+***
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Frontend not connecting to backend:**
+
+- Verify backend is running on port 8080
+- Check `next.config.js` proxy configuration
+- Confirm API URL in `.env.local`
+
+**Geolocation not working:**
+
+- Ensure HTTPS in production
+- Check browser permissions
+- Verify location services are enabled
+
+**Image uploads failing:**
+
+- Check file size limits
+- Verify upload directory permissions
+- Confirm multer configuration
+
+***
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+***
+
+## 🙏 Acknowledgments
+
+- Next.js team for the amazing framework
+- MongoDB team for the database platform
+- SerpAPI for real-time data verification
+- Google Maps for location services
+- The open-source community for inspiration
+
+***
 
 ## 📞 Support
 
-For questions or support, please open an issue in the repository.
+- 📧 **Email**: support@trinetra.com
+- 🐛 **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- 📖 **Documentation**: [Wiki](https://github.com/your-repo/wiki)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
 
----
-
-**Built with ❤️ using Next.js**
-
----
-
-### Video Size Tweaks
-- Update sizes in `app/globals.css`:
-  - `.video-landing` controls the section height (e.g., `85vh`)
-  - `.video-container` controls the video box size (`width`, `height`, `max-width`)
-- For aspect ratio control, set `aspect-ratio: 16 / 9; height: auto;` on `.landing-video` and size via container width.
+***

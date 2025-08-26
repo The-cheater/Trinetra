@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Camera, Save, ArrowLeft, Mail, Phone, MapPin, Globe, Calendar, CheckCircle } from 'lucide-react'
+import { User, Camera, Save, ArrowLeft, Mail, Phone, MapPin } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -17,363 +17,444 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
   const { isDark } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-
+  const [error, setError] = useState('')
+  
   // Form state
   const [formData, setFormData] = useState({
-    fullName: 'John Doe',
-    handle: 'johndoe',
-    bio: 'Community Safety Contributor | Helping make our streets safer one report at a time',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'New York, NY',
-    website: 'https://johndoe.com',
-    birthDate: '1990-01-01',
-    avatar: null as string | null
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: ''
   })
+
+  useEffect(() => {
+    fetchCurrentProfile()
+  }, [])
+
+  const fetchCurrentProfile = async () => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      setError('Please login first')
+      return
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/profile/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setFormData({
+          name: data.data.user.name || '',
+          email: data.data.user.email || '',
+          phone: '',
+          location: '',
+          bio: ''
+        })
+      } else {
+        setError(data.message || 'Failed to load profile')
+      }
+    } catch (error) {
+      setError('Network error')
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
-  }
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setFormData(prev => ({
-          ...prev,
-          avatar: e.target?.result as string
-        }))
-      }
-      reader.readAsDataURL(file)
-    }
+    setError('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setShowSuccess(true)
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 3000)
-    }, 1500)
-  }
+    setError('')
 
-  const handleBack = () => {
-    onNavigate('profile')
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      setError('Please login first')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/profile/me', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setShowSuccess(true)
+        // Update localStorage with new name
+        localStorage.setItem('user_name', formData.name)
+        setTimeout(() => {
+          setShowSuccess(false)
+          onNavigate('profile')
+        }, 2000)
+      } else {
+        setError(data.message || 'Failed to update profile')
+      }
+    } catch (error) {
+      setError('Network error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="main-container">
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#000' : '#fff',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       {/* Header */}
-      <div className="page-header">
-        <div className="header-logo">
-          <Logo size="small" />
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+          <button
+            onClick={() => onNavigate('profile')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: isDark ? '#fff' : '#000',
+              cursor: 'pointer',
+              padding: 'var(--spacing-sm)'
+            }}
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <div>
+            <Logo />
+            <h1 style={{ 
+              fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+              marginTop: 'var(--spacing-sm)',
+              color: isDark ? '#fff' : '#000'
+            }}>
+              Edit Profile
+            </h1>
+          </div>
         </div>
-        <h1 className="page-title">Edit Profile</h1>
-        <motion.button
-          onClick={handleBack}
-          style={{
-            position: 'absolute',
-            left: 'var(--spacing-lg)',
-            background: 'none',
-            border: 'none',
-            color: 'var(--twitter-blue)',
-            cursor: 'pointer',
-            padding: '8px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '32px',
-            minHeight: '32px'
-          }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <ArrowLeft size={20} />
-        </motion.button>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        {/* Avatar Section */}
-        <motion.div 
-          className="card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h3 className="card-title">Profile Picture</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)', marginBottom: 'var(--spacing-lg)' }}>
-            <div style={{ position: 'relative' }}>
-              <div 
-                className="profile-avatar" 
-                style={{ 
-                  width: 'clamp(60px, 15vw, 80px)', 
-                  height: 'clamp(60px, 15vw, 80px)', 
-                  margin: 0,
-                  backgroundImage: formData.avatar ? `url(${formData.avatar})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              >
-                {!formData.avatar && <User size={40} color="var(--twitter-blue)" />}
-              </div>
-              <label
-                htmlFor="avatar-upload"
-                style={{
-                  position: 'absolute',
-                  bottom: '-8px',
-                  right: '-8px',
-                  background: 'var(--twitter-blue)',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  border: '2px solid var(--twitter-background)'
-                }}
-              >
-                <Camera size={16} />
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                style={{ display: 'none' }}
-              />
+      {/* Content */}
+      <div style={{ flex: 1, padding: 'var(--spacing-lg)' }}>
+        <form onSubmit={handleSubmit} style={{ maxWidth: '500px', margin: '0 auto' }}>
+          {error && (
+            <div style={{
+              padding: 'var(--spacing-md)',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: 'var(--radius-sm)',
+              color: '#c33',
+              marginBottom: 'var(--spacing-lg)'
+            }}>
+              {error}
             </div>
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', color: 'var(--twitter-black)', fontSize: 'clamp(14px, 4vw, 16px)' }}>Profile Picture</h4>
-              <p style={{ margin: 0, fontSize: 'clamp(12px, 3.5vw, 14px)', color: 'var(--twitter-dark-gray)', lineHeight: 1.4 }}>
-                Upload a new profile picture. Recommended size: 400x400 pixels.
+          )}
+
+          {showSuccess && (
+            <div style={{
+              padding: 'var(--spacing-md)',
+              backgroundColor: '#efe',
+              border: '1px solid #cfc',
+              borderRadius: 'var(--radius-sm)',
+              color: '#363',
+              marginBottom: 'var(--spacing-lg)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--spacing-sm)'
+            }}>
+              <Save size={20} />
+              Profile updated successfully!
+            </div>
+          )}
+
+          {/* Avatar Section */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: 'var(--spacing-xl)'
+          }}>
+            <div style={{
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              backgroundColor: '#1d9bf0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: '3rem',
+              fontWeight: 'bold',
+              margin: '0 auto var(--spacing-md)'
+            }}>
+              {formData.name?.charAt(0) || 'U'}
+            </div>
+            <button
+              type="button"
+              style={{
+                background: 'none',
+                border: `1px solid ${isDark ? '#333' : '#ccc'}`,
+                borderRadius: 'var(--radius-sm)',
+                padding: 'var(--spacing-sm) var(--spacing-md)',
+                color: isDark ? '#fff' : '#000',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--spacing-sm)',
+                margin: '0 auto'
+              }}
+            >
+              <Camera size={16} />
+              Change Photo
+            </button>
+          </div>
+
+          {/* Basic Information */}
+          <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+            <h3 style={{ 
+              color: isDark ? '#fff' : '#000',
+              marginBottom: 'var(--spacing-lg)'
+            }}>
+              Basic Information
+            </h3>
+
+            {/* Full Name */}
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <label style={{ 
+                display: 'block',
+                marginBottom: 'var(--spacing-sm)',
+                fontWeight: '600',
+                color: isDark ? '#fff' : '#000'
+              }}>
+                Full Name
+              </label>
+              <div style={{ position: 'relative' }}>
+                <User size={20} style={{
+                  position: 'absolute',
+                  left: 'var(--spacing-md)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: isDark ? '#666' : '#999'
+                }} />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter your full name"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: 'var(--spacing-md) var(--spacing-md) var(--spacing-md) 2.5rem',
+                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '1rem',
+                    backgroundColor: isDark ? '#111' : '#fff',
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Email (Read Only) */}
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <label style={{ 
+                display: 'block',
+                marginBottom: 'var(--spacing-sm)',
+                fontWeight: '600',
+                color: isDark ? '#fff' : '#000'
+              }}>
+                Email Address
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={20} style={{
+                  position: 'absolute',
+                  left: 'var(--spacing-md)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: isDark ? '#666' : '#999'
+                }} />
+                <input
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  style={{
+                    width: '100%',
+                    padding: 'var(--spacing-md) var(--spacing-md) var(--spacing-md) 2.5rem',
+                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '1rem',
+                    backgroundColor: isDark ? '#0a0a0a' : '#f5f5f5',
+                    color: isDark ? '#888' : '#666',
+                    cursor: 'not-allowed'
+                  }}
+                />
+              </div>
+              <p style={{ 
+                fontSize: '0.875rem',
+                color: isDark ? '#888' : '#666',
+                marginTop: 'var(--spacing-xs)'
+              }}>
+                Email cannot be changed
+              </p>
+            </div>
+
+            {/* Phone */}
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <label style={{ 
+                display: 'block',
+                marginBottom: 'var(--spacing-sm)',
+                fontWeight: '600',
+                color: isDark ? '#fff' : '#000'
+              }}>
+                Phone Number
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Phone size={20} style={{
+                  position: 'absolute',
+                  left: 'var(--spacing-md)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: isDark ? '#666' : '#999'
+                }} />
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Enter your phone number"
+                  style={{
+                    width: '100%',
+                    padding: 'var(--spacing-md) var(--spacing-md) var(--spacing-md) 2.5rem',
+                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '1rem',
+                    backgroundColor: isDark ? '#111' : '#fff',
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <label style={{ 
+                display: 'block',
+                marginBottom: 'var(--spacing-sm)',
+                fontWeight: '600',
+                color: isDark ? '#fff' : '#000'
+              }}>
+                Location
+              </label>
+              <div style={{ position: 'relative' }}>
+                <MapPin size={20} style={{
+                  position: 'absolute',
+                  left: 'var(--spacing-md)',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: isDark ? '#666' : '#999'
+                }} />
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="Enter your location"
+                  style={{
+                    width: '100%',
+                    padding: 'var(--spacing-md) var(--spacing-md) var(--spacing-md) 2.5rem',
+                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '1rem',
+                    backgroundColor: isDark ? '#111' : '#fff',
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+              <label style={{ 
+                display: 'block',
+                marginBottom: 'var(--spacing-sm)',
+                fontWeight: '600',
+                color: isDark ? '#fff' : '#000'
+              }}>
+                Bio
+              </label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
+                placeholder="Tell us about yourself..."
+                maxLength={160}
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: 'var(--spacing-md)',
+                  border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '1rem',
+                  backgroundColor: isDark ? '#111' : '#fff',
+                  color: isDark ? '#fff' : '#000',
+                  resize: 'vertical',
+                  minHeight: '80px'
+                }}
+              />
+              <p style={{ 
+                fontSize: '0.875rem',
+                color: isDark ? '#888' : '#666',
+                marginTop: 'var(--spacing-xs)',
+                textAlign: 'right'
+              }}>
+                {formData.bio.length}/160
               </p>
             </div>
           </div>
-        </motion.div>
 
-        {/* Basic Information */}
-        <motion.div 
-          className="card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <h3 className="card-title">Basic Information</h3>
-          
-          <div className="form-group">
-            <label className="form-label">Full Name</label>
-            <input
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => handleInputChange('fullName', e.target.value)}
-              className="form-input"
-              placeholder="Enter your full name"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Handle</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }}>
-                @
-              </span>
-              <input
-                type="text"
-                value={formData.handle}
-                onChange={(e) => handleInputChange('handle', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '28px' }}
-                placeholder="username"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Bio</label>
-            <textarea
-              value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-              className="form-input"
-              placeholder="Tell us about yourself..."
-              rows={3}
-              maxLength={160}
-              style={{ minHeight: 'clamp(80px, 20vh, 100px)', resize: 'vertical' }}
-            />
-            <div style={{ 
-              textAlign: 'right', 
-              fontSize: 'clamp(10px, 2.5vw, 12px)', 
-              color: 'var(--twitter-dark-gray)', 
-              marginTop: '4px' 
-            }}>
-              {formData.bio.length}/160
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Contact Information */}
-        <motion.div 
-          className="card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <h3 className="card-title">Contact Information</h3>
-          
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={16} style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }} />
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '36px' }}
-                placeholder="Enter your email address"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Phone Number</label>
-            <div style={{ position: 'relative' }}>
-              <Phone size={16} style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }} />
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '36px' }}
-                placeholder="Enter your phone number"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Location</label>
-            <div style={{ position: 'relative' }}>
-              <MapPin size={16} style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }} />
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '36px' }}
-                placeholder="Enter your location"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Website</label>
-            <div style={{ position: 'relative' }}>
-              <Globe size={16} style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }} />
-              <input
-                type="url"
-                value={formData.website}
-                onChange={(e) => handleInputChange('website', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '36px' }}
-                placeholder="https://yourwebsite.com"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Birth Date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={16} style={{ 
-                position: 'absolute', 
-                left: '12px', 
-                top: '50%', 
-                transform: 'translateY(-50%)', 
-                color: 'var(--twitter-dark-gray)' 
-              }} />
-              <input
-                type="date"
-                value={formData.birthDate}
-                onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '36px' }}
-              />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Save Button */}
-        <motion.div 
-          style={{ padding: 'var(--spacing-lg)' }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-        >
+          {/* Save Button */}
           <motion.button
             type="submit"
             disabled={isLoading}
-            className="btn btn-primary"
-            style={{ 
-              width: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '8px',
-              padding: 'var(--spacing-lg)',
-              fontSize: 'clamp(14px, 4vw, 16px)',
-              fontWeight: '600'
-            }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: 'var(--spacing-lg)',
+              backgroundColor: '#1d9bf0',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--spacing-sm)'
+            }}
           >
             {isLoading ? (
-              <>
-                <div className="loading-spinner" style={{ width: '20px', height: '20px' }}></div>
-                Saving...
-              </>
+              'Saving...'
             ) : (
               <>
                 <Save size={20} />
@@ -381,37 +462,10 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
               </>
             )}
           </motion.button>
-        </motion.div>
-      </form>
+        </form>
+      </div>
 
-      {/* Success Message */}
-      {showSuccess && (
-        <motion.div
-          style={{
-            position: 'fixed',
-            top: 'calc(80px + var(--safe-area-top))',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'var(--twitter-green)',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: 'clamp(12px, 3.5vw, 14px)'
-          }}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-        >
-          <CheckCircle size={16} />
-          Profile updated successfully!
-        </motion.div>
-      )}
-
-      <BottomNavigation activeTab="profile" onNavigate={onNavigate} />
+      <BottomNavigation current="profile" onNavigate={onNavigate} />
     </div>
   )
 }

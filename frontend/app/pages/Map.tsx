@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Search, Navigation, Car, Shield, Users, Bell, TrendingUp, AlertTriangle } from 'lucide-react'
+import { MapPin, Search, Navigation, Car, Shield, AlertTriangle, Locate } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -15,187 +15,545 @@ interface MapProps {
 
 const Map = ({ onNavigate }: MapProps) => {
   const { isDark } = useTheme()
-  const [searchQuery, setSearchQuery] = useState('')
+  const [originInput, setOriginInput] = useState('')
+  const [destinationInput, setDestinationInput] = useState('')
   const [selectedRoute, setSelectedRoute] = useState('fastest')
+  const [routes, setRoutes] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLocationLoading, setIsLocationLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [origin, setOrigin] = useState<{lat: number, lng: number} | null>(null)
+  const [destination, setDestination] = useState<{lat: number, lng: number} | null>(null)
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
 
   const routeOptions = [
-    { id: 'fastest', name: 'Fastest', icon: Navigation, color: 'var(--twitter-blue)' },
-    { id: 'eco', name: 'Eco', icon: Car, color: 'var(--twitter-green)' },
-    { id: 'safety', name: 'Safety', icon: Shield, color: 'var(--twitter-red)' }
+    { id: 'fastest', name: 'Fastest', icon: Navigation, color: '#1d9bf0' },
+    { id: 'eco', name: 'Eco', icon: Car, color: '#00ba7c' },
+    { id: 'safest', name: 'Safest', icon: Shield, color: '#f4212e' }
   ]
 
-  const recentActivity = [
-    { 
-      id: 1, 
-      type: 'traffic', 
-      title: 'Traffic Incident Reported', 
-      location: 'Main Street', 
-      time: '2 minutes ago', 
-      icon: AlertTriangle, 
-      color: 'var(--twitter-red)' 
-    },
-    { 
-      id: 2, 
-      type: 'construction', 
-      title: 'Road Work Alert', 
-      location: 'Highway 101', 
-      time: '5 minutes ago', 
-      icon: Shield, 
-      color: 'var(--twitter-yellow)' 
-    },
-    { 
-      id: 3, 
-      type: 'hazard', 
-      title: 'Pothole Detected', 
-      location: 'Oak Avenue', 
-      time: '8 minutes ago', 
-      icon: AlertTriangle, 
-      color: 'var(--twitter-red)' 
+  // Request user's current location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by this browser')
+      return
     }
-  ]
+
+    setIsLocationLoading(true)
+    setError('')
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const currentPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+        setOrigin(currentPos)
+        setOriginInput('Current Location')
+        setLocationPermission('granted')
+        setIsLocationLoading(false)
+      },
+      (error) => {
+        console.error('Location error:', error)
+        setIsLocationLoading(false)
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError('Location access denied. Please enable location permission.')
+            setLocationPermission('denied')
+            break
+          case error.POSITION_UNAVAILABLE:
+            setError('Location information is unavailable.')
+            break
+          case error.TIMEOUT:
+            setError('Location request timed out.')
+            break
+          default:
+            setError('An unknown error occurred while retrieving location.')
+            break
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    )
+  }
+
+  // Convert address to coordinates (simplified - you could use Google Geocoding API)
+  const geocodeAddress = async (address: string): Promise<{lat: number, lng: number} | null> => {
+    // For demo purposes, return sample coordinates based on common locations
+    const locations: {[key: string]: {lat: number, lng: number}} = {
+      'bangalore': { lat: 12.9716, lng: 77.5946 },
+      'delhi': { lat: 28.7041, lng: 77.1025 },
+      'mumbai': { lat: 19.0760, lng: 72.8777 },
+      'chennai': { lat: 13.0827, lng: 80.2707 },
+      'kolkata': { lat: 22.5726, lng: 88.3639 }
+    }
+
+    const key = address.toLowerCase()
+    for (const [city, coords] of Object.entries(locations)) {
+      if (key.includes(city)) {
+        return coords
+      }
+    }
+
+    // Default to Bangalore if no match found
+    return { lat: 12.9716, lng: 77.5946 }
+  }
+
+  const calculateRoutes = async () => {
+    if (!origin || !destination) {
+      setError('Please set both origin and destination')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Use proxy (next.config.js handles this)
+      const response = await fetch('/api/routes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          origin,
+          destination
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setRoutes(data.data)
+      } else {
+        setError(data.message || 'Failed to calculate routes')
+      }
+    } catch (error) {
+      console.error('Route calculation error:', error)
+      setError('Network error - please check if backend is running')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGetDirections = async () => {
+    setError('')
+    
+    // Set origin
+    if (originInput.toLowerCase() === 'current location' || !originInput) {
+      if (!origin) {
+        getCurrentLocation()
+        return
+      }
+    } else {
+      const originCoords = await geocodeAddress(originInput)
+      if (originCoords) {
+        setOrigin(originCoords)
+      }
+    }
+
+    // Set destination
+    if (destinationInput) {
+      const destCoords = await geocodeAddress(destinationInput)
+      if (destCoords) {
+        setDestination(destCoords)
+        // Auto-calculate routes once both are set
+        setTimeout(() => calculateRoutes(), 100)
+      }
+    } else {
+      setError('Please enter a destination')
+    }
+  }
+
+  // Get current location on component mount
+  useEffect(() => {
+    getCurrentLocation()
+  }, [])
+
+  const getRouteInfo = () => {
+    if (!routes) return null
+    return routes[selectedRoute]
+  }
+
+  const currentRoute = getRouteInfo()
 
   return (
-    <div className="main-container">
-      <div className="page-header">
-        <div className="header-logo">
-          <Logo size="small" />
-        </div>
-        <h1 className="page-title">Maps</h1>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#000' : '#fff',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`
+      }}>
+        <Logo />
+        <h1 style={{ 
+          fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+          marginTop: 'var(--spacing-sm)',
+          color: isDark ? '#fff' : '#000'
+        }}>
+          Smart Routes
+        </h1>
       </div>
 
-      {/* Search */}
-      <motion.div 
-        className="search-container"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Search size={20} className="search-icon" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="search-input"
-          placeholder="Search for destination..."
-        />
-      </motion.div>
-
-      {/* Map Container */}
-      <motion.div 
-        className="map-container"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        <div className="map-placeholder">
-          <MapPin size={48} color="var(--twitter-dark-gray)" style={{ opacity: 0.3 }} />
-          <p style={{ marginTop: 'var(--spacing-lg)', opacity: 0.6, fontWeight: '500', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>
-            {selectedRoute === 'fastest' && 'Fastest Route'}
-            {selectedRoute === 'eco' && 'Eco-Friendly Route'}
-            {selectedRoute === 'safety' && 'Safety-First Route'}
-            {!selectedRoute && 'Interactive Map'}
-          </p>
-          <p style={{ fontSize: 'clamp(0.8rem, 3vw, 0.875rem)', opacity: 0.5, textAlign: 'center', lineHeight: 1.4 }}>
-            {selectedRoute === 'fastest' && 'Optimized for speed and efficiency'}
-            {selectedRoute === 'eco' && 'Minimizes environmental impact'}
-            {selectedRoute === 'safety' && 'Prioritizes safety and low-risk roads'}
-            {!selectedRoute && 'Google Maps integration'}
-          </p>
+      {/* Origin and Destination Inputs */}
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        backgroundColor: isDark ? '#0a0a0a' : '#f9f9f9',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`
+      }}>
+        {/* Origin Input */}
+        <div style={{ marginBottom: 'var(--spacing-md)' }}>
+          <label style={{ 
+            display: 'block',
+            marginBottom: 'var(--spacing-xs)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '0.9rem',
+            fontWeight: '600'
+          }}>
+            From
+          </label>
+          <div style={{ position: 'relative' }}>
+            <MapPin size={20} style={{
+              position: 'absolute',
+              left: 'var(--spacing-md)',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: isDark ? '#666' : '#999'
+            }} />
+            <input
+              type="text"
+              value={originInput}
+              onChange={(e) => setOriginInput(e.target.value)}
+              placeholder="Enter starting location"
+              style={{
+                width: '100%',
+                padding: 'var(--spacing-md) 3rem var(--spacing-md) 2.5rem',
+                border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                borderRadius: 'var(--radius-md)',
+                fontSize: '1rem',
+                backgroundColor: isDark ? '#111' : '#fff',
+                color: isDark ? '#fff' : '#000'
+              }}
+            />
+            <button
+              onClick={getCurrentLocation}
+              disabled={isLocationLoading}
+              style={{
+                position: 'absolute',
+                right: 'var(--spacing-sm)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                backgroundColor: '#1d9bf0',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                padding: 'var(--spacing-sm)',
+                cursor: isLocationLoading ? 'not-allowed' : 'pointer',
+                opacity: isLocationLoading ? 0.6 : 1
+              }}
+            >
+              {isLocationLoading ? (
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid currentColor',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              ) : (
+                <Locate size={16} />
+              )}
+            </button>
+          </div>
         </div>
-      </motion.div>
+
+        {/* Destination Input */}
+        <div style={{ marginBottom: 'var(--spacing-md)' }}>
+          <label style={{ 
+            display: 'block',
+            marginBottom: 'var(--spacing-xs)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '0.9rem',
+            fontWeight: '600'
+          }}>
+            To
+          </label>
+          <div style={{ position: 'relative' }}>
+            <Search size={20} style={{
+              position: 'absolute',
+              left: 'var(--spacing-md)',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: isDark ? '#666' : '#999'
+            }} />
+            <input
+              type="text"
+              value={destinationInput}
+              onChange={(e) => setDestinationInput(e.target.value)}
+              placeholder="Enter destination"
+              style={{
+                width: '100%',
+                padding: 'var(--spacing-md) 2.5rem',
+                border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                borderRadius: 'var(--radius-md)',
+                fontSize: '1rem',
+                backgroundColor: isDark ? '#111' : '#fff',
+                color: isDark ? '#fff' : '#000'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Get Directions Button */}
+        <motion.button
+          onClick={handleGetDirections}
+          disabled={isLoading || isLocationLoading}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            width: '100%',
+            padding: 'var(--spacing-md)',
+            backgroundColor: '#1d9bf0',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: (isLoading || isLocationLoading) ? 'not-allowed' : 'pointer',
+            opacity: (isLoading || isLocationLoading) ? 0.6 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--spacing-sm)'
+          }}
+        >
+          {isLoading ? (
+            'Calculating Routes...'
+          ) : (
+            <>
+              <Navigation size={16} />
+              Get Directions
+            </>
+          )}
+        </motion.button>
+      </div>
 
       {/* Route Options */}
-      <motion.div 
-        className="card"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
-      >
-        <h3 className="card-title">Route Options</h3>
-        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
-          {routeOptions.map((route) => {
-            const IconComponent = route.icon
-            const isActive = selectedRoute === route.id
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`
+      }}>
+        <h3 style={{
+          color: isDark ? '#fff' : '#000',
+          marginBottom: 'var(--spacing-md)'
+        }}>
+          Route Options
+        </h3>
+        <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
+          {routeOptions.map((option) => {
+            const IconComponent = option.icon
+            const isSelected = selectedRoute === option.id
             return (
               <motion.button
-                key={route.id}
-                onClick={() => setSelectedRoute(route.id)}
-                className={`btn-twitter ${isActive ? 'btn-twitter-primary' : 'btn-twitter-outline'}`}
-                style={{ 
-                  flex: 1, 
-                  minWidth: '100px',
-                  backgroundColor: isActive ? route.color : 'transparent',
-                  borderColor: route.color,
-                  color: isActive ? 'white' : route.color
+                key={option.id}
+                onClick={() => setSelectedRoute(option.id)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  flex: 1,
+                  padding: 'var(--spacing-lg)',
+                  backgroundColor: isSelected ? `${option.color}20` : 'transparent',
+                  border: `2px solid ${isSelected ? option.color : (isDark ? '#333' : '#e1e8ed')}`,
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 'var(--spacing-sm)',
+                  cursor: 'pointer',
+                  color: isSelected ? option.color : (isDark ? '#fff' : '#000')
                 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
               >
-                <IconComponent size={16} />
-                {route.name}
+                <IconComponent size={24} />
+                <span style={{ fontWeight: '600' }}>{option.name}</span>
               </motion.button>
             )
           })}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Community Stats */}
-      <motion.div 
-        className="stats-grid"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
-      >
-        <div className="stat-card">
-          <Users size={24} color="var(--twitter-blue)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number">{recentActivity.length}</div>
-          <div className="stat-label">Active Routes</div>
-        </div>
-        <div className="stat-card">
-          <TrendingUp size={24} color="var(--twitter-green)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number" style={{ color: 'var(--twitter-green)' }}>
-            {Math.floor(Math.random() * 100) + 50}
-          </div>
-          <div className="stat-label">Total Priority</div>
-        </div>
-      </motion.div>
-
-      {/* Recent Activity Feed */}
-      <motion.div 
-        className="card"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.4 }}
-      >
-        <h3 className="card-title">Recent Activity</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          {recentActivity.map((activity) => {
-            const IconComponent = activity.icon
-            return (
-              <motion.div
-                key={activity.id}
-                className="activity-item"
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-                style={{ cursor: 'pointer' }}
-              >
-                <div 
-                  className="activity-avatar"
-                  style={{ backgroundColor: activity.color }}
+      {/* Route Details */}
+      <div style={{ flex: 1, padding: 'var(--spacing-lg)' }}>
+        {error && (
+          <div style={{
+            padding: 'var(--spacing-md)',
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: 'var(--radius-sm)',
+            color: '#c33',
+            marginBottom: 'var(--spacing-lg)'
+          }}>
+            {error}
+            {locationPermission === 'denied' && (
+              <div style={{ marginTop: 'var(--spacing-sm)' }}>
+                <button
+                  onClick={getCurrentLocation}
+                  style={{
+                    backgroundColor: '#1d9bf0',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: 'var(--spacing-xs) var(--spacing-sm)',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <IconComponent size={20} color="white" />
-                </div>
-                <div className="activity-content">
-                  <div className="activity-title">{activity.title}</div>
-                  <div className="activity-meta">{activity.time} • {activity.location}</div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      </motion.div>
+                  Try Again
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
-      <BottomNavigation activeTab="maps" onNavigate={onNavigate} />
+        {isLoading && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+            color: isDark ? '#888' : '#666'
+          }}>
+            Calculating routes...
+          </div>
+        )}
+
+        {currentRoute && (
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--spacing-xl)'
+          }}>
+            <h3 style={{
+              color: isDark ? '#fff' : '#000',
+              marginBottom: 'var(--spacing-lg)',
+              textTransform: 'capitalize'
+            }}>
+              {selectedRoute} Route
+            </h3>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: 'var(--spacing-lg)',
+              marginBottom: 'var(--spacing-lg)'
+            }}>
+              <div>
+                <div style={{
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  color: routeOptions.find(r => r.id === selectedRoute)?.color,
+                  marginBottom: 'var(--spacing-xs)'
+                }}>
+                  {currentRoute.duration || 'N/A'}
+                </div>
+                <div style={{ color: isDark ? '#888' : '#666' }}>Duration</div>
+              </div>
+
+              <div>
+                <div style={{
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  color: routeOptions.find(r => r.id === selectedRoute)?.color,
+                  marginBottom: 'var(--spacing-xs)'
+                }}>
+                  {currentRoute.distance || 'N/A'}
+                </div>
+                <div style={{ color: isDark ? '#888' : '#666' }}>Distance</div>
+              </div>
+            </div>
+
+            {/* Route Features */}
+            {currentRoute.route_features && (
+              <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                <h4 style={{
+                  color: isDark ? '#fff' : '#000',
+                  marginBottom: 'var(--spacing-sm)'
+                }}>
+                  Features
+                </h4>
+                <ul style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0
+                }}>
+                  {currentRoute.route_features.map((feature: string, index: number) => (
+                    <li
+                      key={index}
+                      style={{
+                        color: isDark ? '#ccc' : '#666',
+                        marginBottom: 'var(--spacing-xs)',
+                        paddingLeft: 'var(--spacing-md)',
+                        position: 'relative'
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute',
+                        left: 0,
+                        color: routeOptions.find(r => r.id === selectedRoute)?.color
+                      }}>
+                        •
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Cost Information */}
+            {currentRoute.estimated_fuel_cost && (
+              <div style={{
+                backgroundColor: isDark ? '#0a0a0a' : '#fff',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--spacing-lg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ color: isDark ? '#fff' : '#000' }}>Estimated Cost:</span>
+                <span style={{
+                  fontWeight: 'bold',
+                  color: routeOptions.find(r => r.id === selectedRoute)?.color
+                }}>
+                  {currentRoute.estimated_fuel_cost}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!routes && !isLoading && !error && (
+          <div style={{
+            textAlign: 'center',
+            padding: 'var(--spacing-xl)',
+            color: isDark ? '#888' : '#666'
+          }}>
+            <MapPin size={48} style={{ marginBottom: 'var(--spacing-md)' }} />
+            <h3 style={{ marginBottom: 'var(--spacing-sm)' }}>Ready to Navigate</h3>
+            <p>Enter your destination to get smart route suggestions</p>
+          </div>
+        )}
+      </div>
+
+      <BottomNavigation current="maps" onNavigate={onNavigate} />
     </div>
   )
 }

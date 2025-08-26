@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Shield, Award, Clock, MapPin, Settings, LogOut, TrendingUp, CheckCircle, AlertCircle, Sun, Moon } from 'lucide-react'
+import { User, Shield, Award, Clock, MapPin, Settings, LogOut, TrendingUp, CheckCircle, AlertCircle, Sun, Moon, Edit } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -17,293 +17,429 @@ interface ProfileProps {
 const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
   const { isDark, toggleTheme } = useTheme()
   const [activeTab, setActiveTab] = useState('stats')
+  const [profileData, setProfileData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const userStats = {
-    totalReports: 15,
-    verifiedReports: 12,
-    accuracyRate: 80,
-    communityRank: 'Gold'
+  useEffect(() => {
+    fetchProfileData()
+  }, [])
+
+  const fetchProfileData = async () => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      setError('Please login first')
+      return
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/profile/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setProfileData(data.data)
+      } else {
+        setError(data.message || 'Failed to load profile')
+      }
+    } catch (error) {
+      setError('Network error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const recentReports = [
-    { id: 1, type: 'traffic', title: 'Traffic Light Malfunction', status: 'verified', time: '2 hours ago', location: 'Central Ave & Park Street' },
-    { id: 2, type: 'hazard', title: 'Pothole on Oak Street', status: 'pending', time: '1 day ago', location: 'Oak Street, between 3rd & 4th' },
-    { id: 3, type: 'construction', title: 'Road Work Alert', status: 'verified', time: '3 days ago', location: 'Highway 101, Exit 15' }
-  ]
+  const handleSignOut = () => {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_id')
+    localStorage.removeItem('user_name')
+    onSignOut()
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'var(--twitter-green)'
-      case 'pending': return 'var(--twitter-yellow)'
-      case 'rejected': return 'var(--twitter-red)'
-      default: return 'var(--twitter-blue)'
+      case 'verified': return '#00ba7c'
+      case 'unverified': return '#ffd400'
+      case 'rejected': return '#f4212e'
+      default: return '#1d9bf0'
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'verified': return CheckCircle
-      case 'pending': return Clock
+      case 'unverified': return Clock
       case 'rejected': return AlertCircle
       default: return MapPin
     }
   }
 
+  const getReputationBadge = (score: number) => {
+    if (score >= 85) return { level: 'Expert', badge: '🏆', color: '#ffd700' }
+    if (score >= 75) return { level: 'Trusted', badge: '⭐', color: '#00ba7c' }
+    if (score >= 65) return { level: 'Contributor', badge: '📝', color: '#1d9bf0' }
+    return { level: 'Reporter', badge: '👋', color: '#666' }
+  }
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: isDark ? '#000' : '#fff'
+      }}>
+        <div style={{ color: isDark ? '#fff' : '#000' }}>Loading profile...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: isDark ? '#000' : '#fff'
+      }}>
+        <div style={{ color: '#f4212e' }}>{error}</div>
+      </div>
+    )
+  }
+
+  const reputation = getReputationBadge(profileData?.user?.stats?.avg_credibility_score || 0)
+
   return (
-    <div className="main-container">
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#000' : '#fff',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       {/* Header */}
-      <div className="page-header">
-        <div className="header-logo">
-          <Logo size="small" />
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div>
+          <Logo />
+          <h1 style={{ 
+            fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+            marginTop: 'var(--spacing-sm)',
+            color: isDark ? '#fff' : '#000'
+          }}>
+            Profile
+          </h1>
         </div>
-        <h1 className="page-title">Profile</h1>
+        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+          <button
+            onClick={toggleTheme}
+            style={{
+              background: 'none',
+              border: `1px solid ${isDark ? '#333' : '#ccc'}`,
+              borderRadius: 'var(--radius-sm)',
+              padding: 'var(--spacing-sm)',
+              color: isDark ? '#fff' : '#000',
+              cursor: 'pointer'
+            }}
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button
+            onClick={() => onNavigate('edit-profile')}
+            style={{
+              background: 'none',
+              border: `1px solid ${isDark ? '#333' : '#ccc'}`,
+              borderRadius: 'var(--radius-sm)',
+              padding: 'var(--spacing-sm)',
+              color: isDark ? '#fff' : '#000',
+              cursor: 'pointer'
+            }}
+          >
+            <Edit size={20} />
+          </button>
+        </div>
       </div>
 
-      {/* Profile summary */}
-      <motion.div 
-        className="card profile-card" 
-        initial={{ opacity: 0, y: 10 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.3 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-          <div className="profile-avatar" style={{ margin: 0 }}>
-            <User size={40} color="var(--twitter-blue)" />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 className="profile-name" style={{ marginBottom: 4 }}>John Doe</h2>
-            <p className="profile-handle" style={{ margin: 0 }}>@johndoe • Community Safety Contributor</p>
-            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap', marginTop: 'var(--spacing-sm)' }}>
-              <span className="profile-tag">
-                <Award size={14} /> {userStats.communityRank} Member
-              </span>
-              <span className="profile-tag">
-                <Shield size={14} /> Trusted Reporter
-              </span>
+      {/* Profile Info */}
+      <div style={{ padding: 'var(--spacing-lg)' }}>
+        {/* User Card */}
+        <div style={{
+          backgroundColor: isDark ? '#111' : '#f7f9fa',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--spacing-xl)',
+          marginBottom: 'var(--spacing-lg)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: '#1d9bf0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: '2rem',
+              fontWeight: 'bold'
+            }}>
+              {profileData?.user?.name?.charAt(0) || 'U'}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ 
+                color: isDark ? '#fff' : '#000',
+                marginBottom: 'var(--spacing-xs)'
+              }}>
+                {profileData?.user?.name || 'Unknown User'}
+              </h2>
+              <p style={{ 
+                color: isDark ? '#888' : '#666',
+                marginBottom: 'var(--spacing-sm)'
+              }}>
+                @{profileData?.user?.userId || 'user'} • Community Safety Contributor
+              </p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--spacing-sm)',
+                color: reputation.color
+              }}>
+                <span>{reputation.badge}</span>
+                <span style={{ fontWeight: '600' }}>{reputation.level}</span>
+              </div>
             </div>
           </div>
         </div>
-      </motion.div>
 
-      <motion.div 
-        className="stats-grid"
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <div className="stat-card">
-          <TrendingUp size={24} color="var(--twitter-blue)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number">{userStats.totalReports}</div>
-          <div className="stat-label">Total Reports</div>
-        </div>
-        <div className="stat-card">
-          <CheckCircle size={24} color="var(--twitter-green)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number" style={{ color: 'var(--twitter-green)' }}>{userStats.verifiedReports}</div>
-          <div className="stat-label">Verified</div>
-        </div>
-        <div className="stat-card">
-          <Shield size={24} color="var(--twitter-blue)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number">{userStats.accuracyRate}%</div>
-          <div className="stat-label">Accuracy</div>
-        </div>
-        <div className="stat-card">
-          <Clock size={24} color="var(--twitter-yellow)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number" style={{ color: 'var(--twitter-yellow)' }}>12</div>
-          <div className="stat-label">This Month</div>
-        </div>
-      </motion.div>
+        {/* Stats Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 'var(--spacing-md)',
+          marginBottom: 'var(--spacing-lg)'
+        }}>
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: '#1d9bf0',
+              marginBottom: 'var(--spacing-xs)'
+            }}>
+              {profileData?.user?.stats?.reports_submitted || 0}
+            </div>
+            <div style={{ color: isDark ? '#888' : '#666' }}>Total Reports</div>
+          </div>
+          
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: '#00ba7c',
+              marginBottom: 'var(--spacing-xs)'
+            }}>
+              {profileData?.user?.stats?.reports_verified || 0}
+            </div>
+            <div style={{ color: isDark ? '#888' : '#666' }}>Verified</div>
+          </div>
 
-      <motion.div 
-        className="card" 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.5, delay: 0.4 }}
-      >
-        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
-          {[
-            { id: 'stats', name: 'Statistics' }, 
-            { id: 'history', name: 'History' }, 
-            { id: 'settings', name: 'Settings' }
-          ].map((tab) => (
-            <motion.button 
-              key={tab.id} 
-              onClick={() => setActiveTab(tab.id)} 
-              className={`btn-twitter ${activeTab === tab.id ? 'btn-twitter-primary' : 'btn-twitter-outline'}`}
-              style={{ flex: 1, minWidth: '80px' }}
-              whileHover={{ scale: 1.02 }} 
-              whileTap={{ scale: 0.98 }}
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: '#ffd400',
+              marginBottom: 'var(--spacing-xs)'
+            }}>
+              {profileData?.user?.stats?.avg_credibility_score || 0}%
+            </div>
+            <div style={{ color: isDark ? '#888' : '#666' }}>Accuracy Rate</div>
+          </div>
+
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: reputation.color,
+              marginBottom: 'var(--spacing-xs)'
+            }}>
+              {reputation.badge}
+            </div>
+            <div style={{ color: isDark ? '#888' : '#666' }}>Rank</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: isDark ? '#111' : '#f7f9fa',
+          borderRadius: 'var(--radius-sm)',
+          padding: 'var(--spacing-xs)',
+          marginBottom: 'var(--spacing-lg)'
+        }}>
+          {['stats', 'recent'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: 1,
+                padding: 'var(--spacing-sm)',
+                border: 'none',
+                borderRadius: 'var(--radius-xs)',
+                backgroundColor: activeTab === tab ? '#1d9bf0' : 'transparent',
+                color: activeTab === tab ? '#fff' : (isDark ? '#888' : '#666'),
+                fontWeight: '600',
+                cursor: 'pointer',
+                textTransform: 'capitalize'
+              }}
             >
-              {tab.name}
-            </motion.button>
+              {tab === 'stats' ? 'Statistics' : 'Recent Activity'}
+            </button>
           ))}
         </div>
-      </motion.div>
 
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        transition={{ duration: 0.3 }}
-      >
-        {activeTab === 'history' && (
-          <motion.div 
-            className="card" 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.5 }}
-          >
-            <h3 className="card-title">Recent Reports</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-              {recentReports.map((report, index) => {
+        {/* Tab Content */}
+        {activeTab === 'stats' && (
+          <div style={{
+            backgroundColor: isDark ? '#111' : '#f7f9fa',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--spacing-lg)'
+          }}>
+            <h3 style={{ 
+              color: isDark ? '#fff' : '#000',
+              marginBottom: 'var(--spacing-md)'
+            }}>
+              Performance Analytics
+            </h3>
+            <div style={{ color: isDark ? '#888' : '#666' }}>
+              <p>Success Rate: {profileData?.analytics?.successRate || 0}%</p>
+              <p>Total Contributions: {profileData?.analytics?.totalContributions || 0}</p>
+              <p>Community Impact: High</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'recent' && (
+          <div>
+            {profileData?.recentPosts?.length > 0 ? (
+              profileData.recentPosts.map((report: any, index: number) => {
                 const StatusIcon = getStatusIcon(report.status)
                 return (
-                  <motion.div 
-                    key={report.id} 
-                    className="activity-item"
-                    initial={{ opacity: 0, x: -20 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.01 }}
+                  <div
+                    key={report._id || index}
+                    style={{
+                      backgroundColor: isDark ? '#111' : '#f7f9fa',
+                      borderRadius: 'var(--radius-md)',
+                      padding: 'var(--spacing-lg)',
+                      marginBottom: 'var(--spacing-md)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 'var(--spacing-md)'
+                    }}
                   >
-                    <div 
-                      className="activity-avatar"
-                      style={{ backgroundColor: getStatusColor(report.status) }}
-                    >
-                      <StatusIcon size={20} color="white" />
+                    <StatusIcon 
+                      size={20} 
+                      style={{ color: getStatusColor(report.status), marginTop: '2px' }} 
+                    />
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ 
+                        color: isDark ? '#fff' : '#000',
+                        marginBottom: 'var(--spacing-xs)'
+                      }}>
+                        {report.category} - {report.description?.substring(0, 50)}...
+                      </h4>
+                      <p style={{ 
+                        color: isDark ? '#888' : '#666',
+                        fontSize: '0.9rem'
+                      }}>
+                        {report.locationName} • {new Date(report.createdAt).toLocaleDateString()}
+                      </p>
+                      <div style={{
+                        marginTop: 'var(--spacing-xs)',
+                        padding: '2px 8px',
+                        backgroundColor: getStatusColor(report.status),
+                        color: '#fff',
+                        borderRadius: 'var(--radius-xs)',
+                        fontSize: '0.8rem',
+                        display: 'inline-block',
+                        textTransform: 'capitalize'
+                      }}>
+                        {report.status}
+                      </div>
                     </div>
-                    <div className="activity-content">
-                      <div className="activity-title">{report.title}</div>
-                      <div className="activity-meta">{report.time} • {report.location}</div>
-                    </div>
-                    <div 
-                      style={{ 
-                        padding: 'var(--spacing-xs) var(--spacing-sm)', 
-                        background: getStatusColor(report.status), 
-                        color: 'white', 
-                        borderRadius: 'var(--radius-full)', 
-                        fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)', 
-                        fontWeight: '600', 
-                        textTransform: 'capitalize',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {report.status}
-                    </div>
-                  </motion.div>
+                  </div>
                 )
-              })}
-            </div>
-          </motion.div>
+              })
+            ) : (
+              <div style={{
+                backgroundColor: isDark ? '#111' : '#f7f9fa',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--spacing-xl)',
+                textAlign: 'center',
+                color: isDark ? '#888' : '#666'
+              }}>
+                No recent activity
+              </div>
+            )}
+          </div>
         )}
 
-        {activeTab === 'settings' && (
-          <motion.div 
-            className="card" 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.5 }}
+        {/* Settings */}
+        <div style={{ marginTop: 'var(--spacing-xl)' }}>
+          <motion.button
+            onClick={handleSignOut}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: 'var(--spacing-lg)',
+              backgroundColor: '#f4212e',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--spacing-sm)'
+            }}
           >
-            <h3 className="card-title">Account Settings</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-              <motion.button 
-                onClick={() => onNavigate('edit-profile')}
-                className="activity-item"
-                style={{ 
-                  border: '1px solid var(--twitter-border)', 
-                  background: 'var(--twitter-background)', 
-                  cursor: 'pointer',
-                  justifyContent: 'flex-start'
-                }}
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.99 }}
-              >
-                <div className="activity-avatar" style={{ backgroundColor: 'var(--twitter-blue)' }}>
-                  <Settings size={20} color="white" />
-                </div>
-                <div className="activity-content">
-                  <div className="activity-title">Edit Profile</div>
-                  <div className="activity-meta">Update your personal information</div>
-                </div>
-              </motion.button>
-              
-              <motion.button 
-                onClick={() => onNavigate('privacy-settings')}
-                className="activity-item"
-                style={{ 
-                  border: '1px solid var(--twitter-border)', 
-                  background: 'var(--twitter-background)', 
-                  cursor: 'pointer',
-                  justifyContent: 'flex-start'
-                }}
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.99 }}
-              >
-                <div className="activity-avatar" style={{ backgroundColor: 'var(--twitter-green)' }}>
-                  <Shield size={20} color="white" />
-                </div>
-                <div className="activity-content">
-                  <div className="activity-title">Privacy Settings</div>
-                  <div className="activity-meta">Manage your privacy preferences</div>
-                </div>
-              </motion.button>
-              
-              {/* Theme Toggle Setting */}
-              <motion.div 
-                className="activity-item"
-                style={{ 
-                  border: '1px solid var(--twitter-border)', 
-                  background: 'var(--twitter-background)', 
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 'var(--spacing-lg)'
-                }}
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.99 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-                  <div className="activity-avatar" style={{ backgroundColor: isDark ? '#FFD700' : '#1DA1F2' }}>
-                    {isDark ? <Sun size={20} color="white" /> : <Moon size={20} color="white" />}
-                  </div>
-                  <div className="activity-content">
-                    <div className="activity-title">Theme</div>
-                    <div className="activity-meta">{isDark ? 'Dark Mode' : 'Light Mode'}</div>
-                  </div>
-                </div>
-                <motion.button
-                  onClick={toggleTheme}
-                  className="theme-toggle"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {isDark ? <Sun size={20} color="var(--twitter-black)" /> : <Moon size={20} color="var(--twitter-black)" />}
-                </motion.button>
-              </motion.div>
-              
-              <motion.button 
-                onClick={onSignOut}
-                className="activity-item"
-                style={{ 
-                  border: '1px solid var(--twitter-red)', 
-                  background: 'var(--twitter-background)', 
-                  cursor: 'pointer',
-                  justifyContent: 'flex-start'
-                }}
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.99 }}
-              >
-                <div className="activity-avatar" style={{ backgroundColor: 'var(--twitter-red)' }}>
-                  <LogOut size={20} color="white" />
-                </div>
-                <div className="activity-content">
-                  <div className="activity-title" style={{ color: 'var(--twitter-red)' }}>Sign Out</div>
-                  <div className="activity-meta">Log out of your account</div>
-                </div>
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
+            <LogOut size={20} />
+            Sign Out
+          </motion.button>
+        </div>
+      </div>
 
-      <BottomNavigation activeTab="profile" onNavigate={onNavigate} />
+      <BottomNavigation current="profile" onNavigate={onNavigate} />
     </div>
   )
 }

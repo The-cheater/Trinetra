@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import Logo from '../components/Logo'
@@ -19,166 +19,302 @@ const Login = ({ onLogin, onNavigateToSignup }: LoginProps) => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
+
+  // Handle cooldown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => clearInterval(timer)
+  }, [cooldown])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     })
+    setError('') // Clear error on input change
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     
-    // Simulate login process
-    setTimeout(() => {
+    // Check cooldown
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown} seconds before trying again`)
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Use proxy endpoint (handled by next.config.js)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Store JWT token and user info
+        localStorage.setItem('auth_token', data.data.token)
+        localStorage.setItem('user_id', data.data.user.userId)
+        localStorage.setItem('user_name', data.data.user.name)
+        
+        console.log('Login successful!')
+        onLogin()
+      } else {
+        setError(data.message || 'Login failed')
+        
+        // Handle rate limiting
+        if (response.status === 429) {
+          setCooldown(60) // 1 minute cooldown
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('Network error. Please check your connection.')
+    } finally {
       setIsLoading(false)
-      onLogin()
-    }, 1500)
+    }
+  }
+
+  const clearStorageAndRetry = () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    setCooldown(0)
+    setError('')
   }
 
   return (
-    <div className="auth-container">
-      <motion.div
-        className="auth-card"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-3xl)' }}>
-          <Logo size="medium" />
-          <h1 className="auth-title">Welcome Back</h1>
-          <p className="auth-subtitle">Sign in to your Community Safety account</p>
-        </div>
+    <div className="auth-container" style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: isDark ? '#000' : '#fff',
+      color: isDark ? '#fff' : '#000'
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`
+      }}>
+        <Logo />
+        <h1 style={{ 
+          fontSize: 'clamp(1.5rem, 5vw, 2rem)',
+          marginTop: 'var(--spacing-lg)',
+          color: isDark ? '#fff' : '#000'
+        }}>
+          Welcome Back
+        </h1>
+        <p style={{ 
+          color: isDark ? '#888' : '#666',
+          marginTop: 'var(--spacing-sm)'
+        }}>
+          Sign in to your Community Safety account
+        </p>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Email</label>
+      {/* Form */}
+      <div style={{ padding: 'var(--spacing-lg)', flex: 1 }}>
+        <form onSubmit={handleSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
+          {error && (
+            <div style={{
+              padding: 'var(--spacing-md)',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: 'var(--radius-sm)',
+              color: '#c33',
+              marginBottom: 'var(--spacing-lg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span>{error}</span>
+              {cooldown > 0 && (
+                <button
+                  type="button"
+                  onClick={clearStorageAndRetry}
+                  style={{
+                    backgroundColor: '#1d9bf0',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-xs)',
+                    padding: 'var(--spacing-xs) var(--spacing-sm)',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    marginLeft: 'var(--spacing-sm)'
+                  }}
+                >
+                  Clear & Retry
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Email */}
+          <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <label style={{ 
+              display: 'block',
+              marginBottom: 'var(--spacing-sm)',
+              fontWeight: '600',
+              color: isDark ? '#fff' : '#000'
+            }}>
+              Email
+            </label>
             <div style={{ position: 'relative' }}>
-              <Mail 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: 'var(--spacing-lg)', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--twitter-dark-gray)',
-                  pointerEvents: 'none'
-                }} 
-              />
+              <Mail size={20} style={{
+                position: 'absolute',
+                left: 'var(--spacing-md)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: isDark ? '#666' : '#999'
+              }} />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="form-input"
-                style={{ paddingLeft: '48px' }}
-                placeholder="Enter your email"
                 required
+                disabled={cooldown > 0}
+                style={{
+                  width: '100%',
+                  padding: 'var(--spacing-md) var(--spacing-md) var(--spacing-md) 2.5rem',
+                  border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '1rem',
+                  backgroundColor: isDark ? '#111' : '#fff',
+                  color: isDark ? '#fff' : '#000',
+                  opacity: cooldown > 0 ? 0.6 : 1
+                }}
+                placeholder="Enter your email"
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
+          {/* Password */}
+          <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+            <label style={{ 
+              display: 'block',
+              marginBottom: 'var(--spacing-sm)',
+              fontWeight: '600',
+              color: isDark ? '#fff' : '#000'
+            }}>
+              Password
+            </label>
             <div style={{ position: 'relative' }}>
-              <Lock 
-                size={20} 
-                style={{ 
-                  position: 'absolute', 
-                  left: 'var(--spacing-lg)', 
-                  top: '50%', 
-                  transform: 'translateY(-50%)',
-                  color: 'var(--twitter-dark-gray)',
-                  pointerEvents: 'none'
-                }} 
-              />
+              <Lock size={20} style={{
+                position: 'absolute',
+                left: 'var(--spacing-md)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: isDark ? '#666' : '#999'
+              }} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="form-input"
-                style={{ paddingLeft: '48px', paddingRight: '48px' }}
-                placeholder="Enter your password"
                 required
+                disabled={cooldown > 0}
+                style={{
+                  width: '100%',
+                  padding: 'var(--spacing-md) 3rem var(--spacing-md) 2.5rem',
+                  border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '1rem',
+                  backgroundColor: isDark ? '#111' : '#fff',
+                  color: isDark ? '#fff' : '#000',
+                  opacity: cooldown > 0 ? 0.6 : 1
+                }}
+                placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={cooldown > 0}
                 style={{
                   position: 'absolute',
-                  right: 'var(--spacing-lg)',
+                  right: 'var(--spacing-md)',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--twitter-dark-gray)',
-                  padding: 'var(--spacing-xs)',
-                  borderRadius: 'var(--radius-sm)',
-                  transition: 'all 0.2s ease',
-                  minWidth: '32px',
-                  minHeight: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
+                  color: isDark ? '#666' : '#999',
+                  opacity: cooldown > 0 ? 0.6 : 1
                 }}
-                onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'var(--twitter-light-gray)'}
-                onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
+          {/* Submit Button */}
           <motion.button
             type="submit"
-            className="btn btn-primary"
-            disabled={isLoading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            style={{ marginTop: 'var(--spacing-lg)' }}
+            disabled={isLoading || cooldown > 0}
+            whileHover={{ scale: isLoading || cooldown > 0 ? 1 : 1.02 }}
+            whileTap={{ scale: isLoading || cooldown > 0 ? 1 : 0.98 }}
+            style={{
+              width: '100%',
+              padding: 'var(--spacing-md)',
+              backgroundColor: cooldown > 0 ? '#666' : '#1d9bf0',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: (isLoading || cooldown > 0) ? 'not-allowed' : 'pointer',
+              opacity: (isLoading || cooldown > 0) ? 0.6 : 1
+            }}
           >
-            {isLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-                <div className="loading-spinner"></div>
-                Signing In...
-              </div>
-            ) : (
-              'Sign In'
-            )}
+            {cooldown > 0 
+              ? `Wait ${cooldown}s` 
+              : isLoading 
+                ? 'Signing In...' 
+                : 'Sign In'
+            }
           </motion.button>
         </form>
 
+        {/* Sign Up Link */}
         <div style={{ 
           textAlign: 'center', 
-          marginTop: 'var(--spacing-2xl)', 
-          fontSize: 'clamp(0.8rem, 3vw, 0.875rem)', 
-          color: 'var(--twitter-dark-gray)' 
+          marginTop: 'var(--spacing-xl)',
+          color: isDark ? '#888' : '#666'
         }}>
-          <p>
-            Don't have an account?{' '}
-            <button
-              onClick={onNavigateToSignup}
-              style={{
-                color: 'var(--twitter-blue)',
-                fontWeight: '500',
-                textDecoration: 'none',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 'inherit'
-              }}
-              onMouseEnter={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
-              onMouseLeave={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
-            >
-              Sign Up
-            </button>
-          </p>
+          Don't have an account?{' '}
+          <button
+            onClick={onNavigateToSignup}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#1d9bf0',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            Sign Up
+          </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

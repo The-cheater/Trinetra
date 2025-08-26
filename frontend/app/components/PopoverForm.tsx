@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, CheckCircle } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface PopoverFormProps {
   title: string
@@ -14,19 +15,23 @@ interface PopoverFormProps {
   showSuccess?: boolean
   openChild: React.ReactNode
   successChild: React.ReactNode
+  onSubmit?: () => void
 }
 
-export const PopoverForm = ({ 
-  title, 
-  open, 
-  setOpen, 
-  width = "90vw", 
+export const PopoverForm = ({
+  title,
+  open,
+  setOpen,
+  width = "90vw",
   height = "auto",
   showCloseButton = true,
   showSuccess = false,
   openChild,
-  successChild 
+  successChild,
+  onSubmit
 }: PopoverFormProps) => {
+  const { isDark } = useTheme()
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -40,273 +45,253 @@ export const PopoverForm = ({
     }
   }, [open, setOpen])
 
+  if (!open) return null
+
   return (
     <AnimatePresence>
-      {open && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--spacing-lg)',
+        zIndex: 2000
+      }}>
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-          style={{ 
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            padding: '16px'
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          style={{
+            backgroundColor: isDark ? '#111' : '#fff',
+            borderRadius: 'var(--radius-lg)',
+            width: '100%',
+            maxWidth: width,
+            height: height,
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column'
           }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
         >
-          {/* Backdrop */}
-          <motion.div
-            className="absolute inset-0"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setOpen(false)}
-          />
-          
-          {/* Popover Content - Centered and Mobile Responsive */}
-          <motion.div
-            className="relative z-10 w-full max-w-sm mx-auto"
-            style={{ 
-              width: '100%',
-              maxWidth: '400px',
-              height: height,
-              margin: '0 auto'
-            }}
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          >
-            <div 
-              className="popover-form-content"
-              style={{ 
-                backgroundColor: 'var(--twitter-background)',
-                border: '1px solid var(--twitter-border)',
-                borderRadius: '16px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                overflow: 'hidden',
-                width: '100%'
-              }}
-            >
-              {/* Header */}
-              <div 
-                className="popover-form-header"
-                style={{ 
-                  padding: '16px 20px',
-                  borderBottom: '1px solid var(--twitter-border)',
+          {/* Header */}
+          <div style={{
+            padding: 'var(--spacing-lg)',
+            borderBottom: `1px solid ${isDark ? '#333' : '#e1e8ed'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0
+          }}>
+            <h3 style={{
+              margin: 0,
+              color: isDark ? '#fff' : '#000',
+              fontSize: '1.1rem',
+              fontWeight: '600'
+            }}>
+              {title}
+            </h3>
+            
+            {showCloseButton && (
+              <button
+                onClick={() => setOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isDark ? '#888' : '#666',
+                  cursor: 'pointer',
+                  padding: 'var(--spacing-sm)',
+                  borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'center'
                 }}
               >
-                <h3 style={{ 
-                  fontSize: 'clamp(14px, 4vw, 16px)', 
-                  fontWeight: '600', 
-                  color: 'var(--twitter-black)',
-                  margin: 0,
-                  lineHeight: 1.3
-                }}>
-                  {title}
-                </h3>
-                {showCloseButton && (
-                  <button
-                    onClick={() => setOpen(false)}
-                    style={{
-                      padding: '8px',
-                      borderRadius: '50%',
-                      transition: 'all 0.2s ease',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      minWidth: '32px',
-                      minHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'var(--twitter-light-gray)'}
-                    onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                  >
-                    <X size={16} style={{ color: 'var(--twitter-dark-gray)' }} />
-                  </button>
-                )}
-              </div>
+                <X size={20} />
+              </button>
+            )}
+          </div>
 
-              {/* Content */}
-              <div style={{ position: 'relative' }}>
-                <AnimatePresence mode="wait">
-                  {showSuccess ? (
-                    <motion.div
-                      key="success"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {successChild}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="form"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {openChild}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </motion.div>
+          {/* Content */}
+          <div style={{ 
+            flex: 1, 
+            overflow: 'auto',
+            padding: showSuccess ? 0 : 'var(--spacing-lg)'
+          }}>
+            {showSuccess ? successChild : openChild}
+          </div>
         </motion.div>
-      )}
+      </div>
     </AnimatePresence>
   )
 }
 
+// Button component for the popover form
 interface PopoverFormButtonProps {
+  type?: 'button' | 'submit'
+  variant?: 'primary' | 'secondary'
+  disabled?: boolean
   loading?: boolean
-  text?: string
+  onClick?: () => void
+  children: React.ReactNode
+  icon?: React.ReactNode
 }
 
-export const PopoverFormButton = ({ loading = false, text = "Submit" }: PopoverFormButtonProps) => {
+export const PopoverFormButton = ({
+  type = 'button',
+  variant = 'primary',
+  disabled = false,
+  loading = false,
+  onClick,
+  children,
+  icon
+}: PopoverFormButtonProps) => {
+  const { isDark } = useTheme()
+  
+  const getPrimaryStyles = () => ({
+    backgroundColor: '#1d9bf0',
+    color: '#fff',
+    border: 'none'
+  })
+  
+  const getSecondaryStyles = () => ({
+    backgroundColor: 'transparent',
+    color: isDark ? '#fff' : '#000',
+    border: `1px solid ${isDark ? '#333' : '#ccc'}`
+  })
+
+  const styles = variant === 'primary' ? getPrimaryStyles() : getSecondaryStyles()
+
   return (
-    <button
-      type="submit"
-      disabled={loading}
+    <motion.button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || loading}
+      whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
+      whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
       style={{
-        width: '100%',
-        padding: '12px 16px',
-        backgroundColor: loading ? 'var(--twitter-dark-gray)' : 'var(--twitter-blue)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: 'clamp(12px, 3.5vw, 14px)',
+        padding: 'var(--spacing-md) var(--spacing-lg)',
+        borderRadius: 'var(--radius-md)',
+        cursor: disabled || loading ? 'not-allowed' : 'pointer',
         fontWeight: '600',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s ease',
+        fontSize: '1rem',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        minHeight: '44px'
-      }}
-      onMouseEnter={(e) => {
-        if (!loading) {
-          (e.target as HTMLElement).style.backgroundColor = 'var(--twitter-blue-hover)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.target as HTMLElement).style.backgroundColor = loading ? 'var(--twitter-dark-gray)' : 'var(--twitter-blue)'
+        gap: 'var(--spacing-sm)',
+        opacity: disabled || loading ? 0.6 : 1,
+        transition: 'all 0.2s ease',
+        ...styles
       }}
     >
       {loading ? (
         <>
-          <div className="loading-spinner" style={{ width: '16px', height: '16px' }}></div>
+          <div style={{
+            width: '16px',
+            height: '16px',
+            border: '2px solid transparent',
+            borderTop: '2px solid currentColor',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
           Loading...
         </>
       ) : (
         <>
-          <Send size={16} />
-          {text}
+          {icon}
+          {children}
         </>
       )}
-    </button>
+    </motion.button>
   )
 }
 
+// Success component for the popover form
 interface PopoverFormSuccessProps {
   title: string
   description: string
+  icon?: React.ReactNode
 }
 
-export const PopoverFormSuccess = ({ title, description }: PopoverFormSuccessProps) => {
+export const PopoverFormSuccess = ({
+  title,
+  description,
+  icon = <CheckCircle size={48} />
+}: PopoverFormSuccessProps) => {
+  const { isDark } = useTheme()
+
   return (
-    <div style={{ 
-      padding: '24px',
-      textAlign: 'center',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '16px'
-    }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      style={{
+        textAlign: 'center',
+        padding: 'var(--spacing-xl)',
+        color: '#00ba7c'
+      }}
+    >
       <div style={{
-        width: '48px',
-        height: '48px',
-        backgroundColor: 'var(--twitter-green)',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        marginBottom: 'var(--spacing-lg)'
       }}>
-        <CheckCircle size={24} color="white" />
+        {icon}
       </div>
-      <div>
-        <h4 style={{ 
-          fontSize: 'clamp(16px, 4.5vw, 18px)', 
-          fontWeight: '600', 
-          color: 'var(--twitter-black)',
-          margin: '0 0 8px 0',
-          lineHeight: 1.3
-        }}>
-          {title}
-        </h4>
-        <p style={{ 
-          fontSize: 'clamp(12px, 3.5vw, 14px)', 
-          color: 'var(--twitter-dark-gray)',
-          margin: 0,
-          lineHeight: '1.5'
-        }}>
-          {description}
-        </p>
-      </div>
-    </div>
+      
+      <h3 style={{ 
+        margin: '0 0 var(--spacing-sm)', 
+        color: isDark ? '#fff' : '#000',
+        fontSize: '1.2rem'
+      }}>
+        {title}
+      </h3>
+      
+      <p style={{ 
+        margin: 0, 
+        color: isDark ? '#888' : '#666',
+        lineHeight: '1.4'
+      }}>
+        {description}
+      </p>
+    </motion.div>
   )
 }
 
-export const PopoverFormSeparator = () => (
-  <div style={{ 
-    width: '100%', 
-    height: '1px', 
-    backgroundColor: 'var(--twitter-border)' 
-  }} />
+// Additional utility components
+export const PopoverFormSeparator = () => {
+  const { isDark } = useTheme()
+  
+  return (
+    <div style={{
+      height: '1px',
+      backgroundColor: isDark ? '#333' : '#e1e8ed',
+      margin: 'var(--spacing-lg) 0'
+    }} />
+  )
+}
+
+export const PopoverFormCutOutLeftIcon = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    position: 'absolute',
+    left: 'var(--spacing-md)',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#666'
+  }}>
+    {children}
+  </div>
 )
 
-export const PopoverFormCutOutLeftIcon = () => (
+export const PopoverFormCutOutRightIcon = ({ children }: { children: React.ReactNode }) => (
   <div style={{
-    width: '12px',
-    height: '12px',
-    backgroundColor: 'var(--twitter-background)',
-    border: '1px solid var(--twitter-border)',
-    borderRight: 'none',
-    borderBottom: 'none',
-    transform: 'rotate(-45deg)',
     position: 'absolute',
-    left: '0',
+    right: 'var(--spacing-md)',
     top: '50%',
-    marginTop: '-6px'
-  }} />
-)
-
-export const PopoverFormCutOutRightIcon = () => (
-  <div style={{
-    width: '12px',
-    height: '12px',
-    backgroundColor: 'var(--twitter-background)',
-    border: '1px solid var(--twitter-border)',
-    borderLeft: 'none',
-    borderTop: 'none',
-    transform: 'rotate(-45deg)',
-    position: 'absolute',
-    right: '0',
-    top: '50%',
-    marginTop: '-6px'
-  }} />
+    transform: 'translateY(-50%)',
+    color: '#666'
+  }}>
+    {children}
+  </div>
 )

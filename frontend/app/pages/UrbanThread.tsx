@@ -1,13 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Bell, AlertTriangle, Construction, Car, MapPin, ThumbsUp, ThumbsDown, MessageCircle, Share2, CheckCircle, Filter, TrendingUp, Clock, MapPin as MapPinIcon, Users, Calendar, AlertCircle } from 'lucide-react'
+import { Bell, AlertTriangle, Construction, Car, MapPin, ThumbsUp, ThumbsDown, MessageCircle, Share2, CheckCircle, Filter, TrendingUp, Clock, Users, Locate, Camera, X } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
-import { StackedDialog, StackedDialogTrigger } from '../components/StackedDialog'
-import { CommentForm } from '../components/CommentForm'
 
 type Page = 'home' | 'maps' | 'contribute' | 'profile'
 
@@ -15,510 +13,743 @@ interface UrbanThreadProps {
   onNavigate: (page: Page) => void
 }
 
+interface Comment {
+  _id: string
+  author: string
+  body: string
+  createdAt: string
+  userId: string
+}
+
+interface Incident {
+  _id: string
+  category: string
+  description: string
+  locationName: string
+  severity: string
+  confidence_score: number
+  author: string
+  author_city?: string
+  photo_url?: string
+  upvotes: number
+  downvotes: number
+  comments_count: number
+  createdAt: string
+  distance_km?: number
+}
+
 const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
   const { isDark } = useTheme()
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [showFilterModal, setShowFilterModal] = useState(false)
-  const [severityFilter, setSeverityFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [commentFormOpen, setCommentFormOpen] = useState(false)
-  const [selectedIncident, setSelectedIncident] = useState<any>(null)
-  const [incidentReactions, setIncidentReactions] = useState<Record<number, { liked: boolean; disliked: boolean }>>({})
+  const [activeFilter, setActiveFilter] = useState('All')
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [useCityFilter, setUseCityFilter] = useState(false)
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
 
-  const incidents = [
-    { 
-      id: 1, 
-      type: 'traffic', 
-      title: 'Major Traffic Jam on Main Street', 
-      description: 'Multiple vehicle collision causing severe delays. Emergency services on scene.', 
-      time: '2 minutes ago', 
-      location: 'Main Street & 5th Ave', 
-      severity: 'high', 
-      upvotes: 156, 
-      dislikes: 12,
-      comments: 23, 
-      verified: true,
-      priority: 95
-    },
-    { 
-      id: 2, 
-      type: 'construction', 
-      title: 'Road Work on Highway 101', 
-      description: 'Lane closure for maintenance work. Expect delays during rush hour.', 
-      time: '15 minutes ago', 
-      location: 'Highway 101, Exit 15', 
-      severity: 'medium', 
-      upvotes: 89, 
-      dislikes: 5,
-      comments: 12, 
-      verified: true,
-      priority: 78
-    },
-    { 
-      id: 3, 
-      type: 'hazard', 
-      title: 'Large Pothole on Oak Street', 
-      description: 'Deep pothole causing vehicle damage. Multiple reports confirmed.', 
-      time: '1 hour ago', 
-      location: 'Oak Street, between 3rd & 4th', 
-      severity: 'medium', 
-      upvotes: 67, 
-      dislikes: 3,
-      comments: 8, 
-      verified: false,
-      priority: 65
-    },
-    { 
-      id: 4, 
-      type: 'traffic', 
-      title: 'Traffic Light Malfunction', 
-      description: 'Traffic light stuck on red causing major intersection backup.', 
-      time: '2 hours ago', 
-      location: 'Central Ave & Park Street', 
-      severity: 'high', 
-      upvotes: 234, 
-      dislikes: 18,
-      comments: 31, 
-      verified: true,
-      priority: 92
-    },
-    { 
-      id: 5, 
-      type: 'hazard', 
-      title: 'Broken Street Light', 
-      description: 'Street light not working, creating safety hazard at night.', 
-      time: '3 hours ago', 
-      location: 'Riverside Drive', 
-      severity: 'low', 
-      upvotes: 34, 
-      dislikes: 1,
-      comments: 5, 
-      verified: false,
-      priority: 45
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+          updateUserLocation(position.coords.latitude, position.coords.longitude)
+        },
+        (error) => {
+          console.error('Location error:', error)
+        }
+      )
     }
-  ]
+  }, [])
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'traffic': return Car
-      case 'construction': return Construction
-      case 'hazard': return AlertTriangle
+  useEffect(() => {
+    fetchIncidents()
+  }, [activeFilter, currentLocation, useCityFilter])
+
+  const updateUserLocation = async (lat: number, lng: number) => {
+    const token = localStorage.getItem('auth_token')
+    if (!token) return
+
+    try {
+      await fetch('/api/location/update', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lat, lng })
+      })
+    } catch (error) {
+      console.error('Failed to update location:', error)
+    }
+  }
+
+  const fetchIncidents = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      let url = '/api/threads?'
+
+      if (currentLocation) {
+        url += `lat=${currentLocation.lat}&lng=${currentLocation.lng}&`
+        if (useCityFilter) {
+          url += 'user_city_only=true&'
+        }
+      }
+
+      if (activeFilter !== 'All') {
+        url += `category=${activeFilter}&`
+      }
+
+      const token = localStorage.getItem('auth_token')
+      const headers: any = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      const response = await fetch(url, { headers })
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setIncidents(data.data.posts || [])
+      } else {
+        setError(data.message || 'Failed to fetch incidents')
+      }
+    } catch (error) {
+      setError('Network error')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchComments = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/comments/${postId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setComments(data.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error)
+    }
+  }
+
+  const handleCommentSubmit = async (postId: string) => {
+    if (!newComment.trim()) return
+
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      alert('Please login to comment')
+      return
+    }
+
+    setIsSubmittingComment(true)
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          postId,
+          body: newComment.trim()
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setComments([data.data, ...comments])
+        setNewComment('')
+        // Update incident comment count
+        setIncidents(incidents.map(inc => 
+          inc._id === postId 
+            ? { ...inc, comments_count: inc.comments_count + 1 }
+            : inc
+        ))
+      } else {
+        alert(data.message || 'Failed to add comment')
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error)
+      alert('Network error. Please try again.')
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+
+  const openComments = async (incident: Incident) => {
+    setSelectedIncident(incident._id)
+    await fetchComments(incident._id)
+  }
+
+  const closeComments = () => {
+    setSelectedIncident(null)
+    setComments([])
+    setNewComment('')
+  }
+
+  const getIcon = (category: string) => {
+    switch (category) {
+      case 'Traffic': return Car
+      case 'Road Work': return Construction
+      case 'Hazard': return AlertTriangle
       default: return MapPin
     }
   }
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'var(--twitter-red)'
-      case 'medium': return 'var(--twitter-yellow)'
-      case 'low': return 'var(--twitter-green)'
-      default: return 'var(--twitter-blue)'
+    switch (severity?.toLowerCase()) {
+      case 'high': return '#f4212e'
+      case 'medium': return '#ffd400'
+      case 'low': return '#00ba7c'
+      default: return '#1d9bf0'
     }
   }
 
-  const getPriorityColor = (priority: number) => {
-    if (priority >= 90) return 'var(--twitter-red)'
-    if (priority >= 70) return 'var(--twitter-yellow)'
-    return 'var(--twitter-green)'
+  const getTimeAgo = (dateString: string) => {
+    const now = new Date()
+    const past = new Date(dateString)
+    const diffInMinutes = Math.floor((now.getTime() - past.getTime()) / (1000 * 60))
+
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
+    return `${Math.floor(diffInMinutes / 1440)} days ago`
   }
 
-  const filteredIncidents = incidents.filter(incident => {
-    const categoryMatch = activeFilter === 'all' || incident.type === activeFilter
-    const severityMatch = severityFilter === 'all' || incident.severity === severityFilter
-    return categoryMatch && severityMatch
-  })
-
-  const sortedIncidents = filteredIncidents.sort((a, b) => b.priority - a.priority)
-
-  const handleReaction = (incidentId: number, reactionType: 'like' | 'dislike') => {
-    setIncidentReactions(prev => {
-      const current = prev[incidentId] || { liked: false, disliked: false }
-      
-      if (reactionType === 'like') {
-        return {
-          ...prev,
-          [incidentId]: {
-            liked: !current.liked,
-            disliked: current.liked ? false : current.disliked
-          }
-        }
-      } else if (reactionType === 'dislike') {
-        return {
-          ...prev,
-          [incidentId]: {
-            liked: current.disliked ? false : current.liked,
-            disliked: !current.disliked
-          }
-        }
-      }
-      
-      return prev
-    })
-  }
-
-  // Create detailed dialog items for each incident
-  const createDialogItems = (incident: any) => [
-    {
-      title: incident.title,
-      description: `${incident.type.charAt(0).toUpperCase() + incident.type.slice(1)} Incident`,
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ 
-            backgroundColor: 'var(--twitter-secondary-bg)', 
-            borderRadius: '8px', 
-            padding: '16px' 
-          }}>
-            <p style={{ 
-              color: 'var(--twitter-black)', 
-              lineHeight: '1.6',
-              margin: 0,
-              fontSize: 'clamp(12px, 3.5vw, 14px)'
-            }}>
-              {incident.description}
-            </p>
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(11px, 3vw, 14px)' }}>
-              <MapPinIcon size={16} style={{ color: 'var(--twitter-dark-gray)' }} />
-              <span style={{ color: 'var(--twitter-dark-gray)' }}>{incident.location}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'clamp(11px, 3vw, 14px)' }}>
-              <Calendar size={16} style={{ color: 'var(--twitter-dark-gray)' }} />
-              <span style={{ color: 'var(--twitter-dark-gray)' }}>{incident.time}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div 
-              style={{ 
-                width: '12px', 
-                height: '12px', 
-                borderRadius: '50%',
-                backgroundColor: getSeverityColor(incident.severity) 
-              }}
-            />
-            <span style={{ fontSize: 'clamp(12px, 3.5vw, 14px)', fontWeight: '500', textTransform: 'capitalize' }}>
-              {incident.severity} Severity
-            </span>
-          </div>
-
-          {incident.verified && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--twitter-green)' }}>
-              <CheckCircle size={16} />
-              <span style={{ fontSize: 'clamp(12px, 3.5vw, 14px)', fontWeight: '500' }}>Verified Report</span>
-            </div>
-          )}
-        </div>
-      )
-    }
+  const categories = [
+    { id: 'All', name: 'All', color: '#1d9bf0' },
+    { id: 'Traffic', name: 'Traffic', color: '#f4212e' },
+    { id: 'Road Work', name: 'Construction', color: '#ffd400' },
+    { id: 'Hazard', name: 'Hazards', color: '#00ba7c' },
+    { id: 'Other', name: 'Other', color: '#666' }
   ]
 
   return (
-    <div className="main-container">
-      <div className="page-header">
-        <div className="header-logo">
-          <Logo size="small" />
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: isDark ? '#000' : '#fff',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: 'var(--spacing-lg)',
+        borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
+        position: 'sticky',
+        top: 0,
+        backgroundColor: isDark ? '#000' : '#fff',
+        zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <Logo />
+            <h1 style={{ 
+              fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+              marginTop: 'var(--spacing-sm)',
+              color: isDark ? '#fff' : '#000'
+            }}>
+              Urban Thread
+            </h1>
+          </div>
+          <button
+            onClick={() => setUseCityFilter(!useCityFilter)}
+            style={{
+              background: useCityFilter ? '#1d9bf0' : 'none',
+              border: `1px solid ${useCityFilter ? '#1d9bf0' : (isDark ? '#333' : '#ccc')}`,
+              borderRadius: 'var(--radius-sm)',
+              padding: 'var(--spacing-sm)',
+              color: useCityFilter ? '#fff' : (isDark ? '#fff' : '#000'),
+              cursor: 'pointer'
+            }}
+          >
+            <Locate size={16} />
+          </button>
         </div>
-        <h1 className="page-title">Urban Thread</h1>
-        <motion.button
-          className="filter-button"
-          onClick={() => setShowFilterModal(true)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          style={{ position: 'absolute', right: 'var(--spacing-lg)' }}
-        >
-          <Filter size={16} />
-          Filter
-        </motion.button>
-      </div>
 
-      {/* Priority Stats */}
-      <motion.div 
-        className="stats-grid content-container"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="stat-card">
-          <TrendingUp size={24} color="var(--twitter-blue)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number">{filteredIncidents.length}</div>
-          <div className="stat-label">
-            {activeFilter === 'all' && 'All Issues'}
-            {activeFilter === 'traffic' && 'Traffic Issues'}
-            {activeFilter === 'construction' && 'Construction Issues'}
-            {activeFilter === 'hazard' && 'Hazard Issues'}
+        {/* Location Status */}
+        {currentLocation && (
+          <p style={{ 
+            color: isDark ? '#888' : '#666',
+            fontSize: '0.8rem',
+            margin: 'var(--spacing-sm) 0 0 0'
+          }}>
+            📍 {useCityFilter ? 'Showing incidents from your city' : 'Showing all nearby incidents'}
+          </p>
+        )}
+
+        {/* Quick Stats */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 'var(--spacing-md)',
+          marginTop: 'var(--spacing-md)'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: 'bold', 
+              color: '#1d9bf0' 
+            }}>
+              {incidents.length}
+            </div>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: isDark ? '#888' : '#666' 
+            }}>
+              Active Issues
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: 'bold', 
+              color: '#00ba7c' 
+            }}>
+              {incidents.filter(i => i.confidence_score >= 70).length}
+            </div>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: isDark ? '#888' : '#666' 
+            }}>
+              Verified
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: 'bold', 
+              color: '#ffd400' 
+            }}>
+              {incidents.length > 0
+                ? Math.round(incidents.reduce((acc, incident) => acc + incident.confidence_score, 0) / incidents.length)
+                : 0}%
+            </div>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: isDark ? '#888' : '#666' 
+            }}>
+              Avg Confidence
+            </div>
           </div>
         </div>
-        <div className="stat-card">
-          <Clock size={24} color="var(--twitter-green)" style={{ marginBottom: 'var(--spacing-sm)' }} />
-          <div className="stat-number" style={{ color: 'var(--twitter-green)' }}>
-            {filteredIncidents.length > 0 
-              ? Math.round(filteredIncidents.reduce((acc, incident) => acc + incident.priority, 0) / filteredIncidents.length)
-              : 0}%
-          </div>
-          <div className="stat-label">Avg Priority</div>
-        </div>
-      </motion.div>
 
-      {/* Quick Filters */}
-      <motion.div 
-        className="card content-container" 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        <div className="chip-row">
-          {[
-            { id: 'all', name: 'All', color: 'var(--twitter-blue)' }, 
-            { id: 'traffic', name: 'Traffic', color: 'var(--twitter-red)' }, 
-            { id: 'construction', name: 'Construction', color: 'var(--twitter-yellow)' }, 
-            { id: 'hazard', name: 'Hazards', color: 'var(--twitter-green)' }
-          ].map((filter) => (
-            <motion.button 
-              key={filter.id} 
-              onClick={() => setActiveFilter(filter.id)} 
-              className={`btn-twitter ${activeFilter === filter.id ? 'btn-twitter-primary' : 'btn-twitter-outline'}`}
-              style={{ 
-                whiteSpace: 'nowrap',
-                backgroundColor: activeFilter === filter.id ? filter.color : 'transparent',
-                borderColor: filter.color,
-                color: activeFilter === filter.id ? 'white' : filter.color
-              }}
-              whileHover={{ scale: 1.05 }} 
+        {/* Category Filters */}
+        <div style={{
+          display: 'flex',
+          gap: 'var(--spacing-sm)',
+          overflowX: 'auto',
+          paddingTop: 'var(--spacing-md)'
+        }}>
+          {categories.map((category) => (
+            <motion.button
+              key={category.id}
+              onClick={() => setActiveFilter(category.id)}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              style={{
+                whiteSpace: 'nowrap',
+                padding: 'var(--spacing-sm) var(--spacing-md)',
+                borderRadius: 'var(--radius-md)',
+                border: `2px solid ${category.color}`,
+                backgroundColor: activeFilter === category.id ? category.color : 'transparent',
+                color: activeFilter === category.id ? '#fff' : category.color,
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.9rem'
+              }}
             >
-              {filter.name}
+              {category.name}
             </motion.button>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Incidents List */}
-      <div className="content-container" style={{ padding: '0 var(--spacing-md)' }}>
-        {sortedIncidents.length === 0 ? (
-          <motion.div
-            className="card"
-            style={{ 
-              textAlign: 'center', 
-              padding: 'var(--spacing-xl)',
-              color: 'var(--twitter-dark-gray)'
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <AlertTriangle size={48} style={{ opacity: 0.5, marginBottom: 'var(--spacing-md)' }} />
-            <h3 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--twitter-black)' }}>
-              No incidents found
-            </h3>
-            <p style={{ fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)' }}>
-              Try adjusting your filters to see more results.
-            </p>
-          </motion.div>
+      <div style={{ 
+        flex: 1, 
+        overflowY: 'auto',
+        paddingBottom: '100px'
+      }}>
+        {isLoading ? (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+            color: isDark ? '#888' : '#666'
+          }}>
+            Loading incidents...
+          </div>
+        ) : error ? (
+          <div style={{
+            padding: 'var(--spacing-lg)',
+            textAlign: 'center',
+            color: '#f4212e'
+          }}>
+            {error}
+          </div>
+        ) : incidents.length === 0 ? (
+          <div style={{
+            padding: 'var(--spacing-xl)',
+            textAlign: 'center',
+            color: isDark ? '#888' : '#666'
+          }}>
+            <AlertTriangle size={48} style={{ marginBottom: 'var(--spacing-md)' }} />
+            <h3>No incidents found</h3>
+            <p>Try adjusting your filters or check back later.</p>
+          </div>
         ) : (
-          sortedIncidents.map((incident, index) => {
-          const IconComponent = getIcon(incident.type)
-          return (
-            <StackedDialogTrigger key={incident.id} items={createDialogItems(incident)}>
-              <motion.div 
-                className="activity-item" 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ scale: 1.01 }}
-                style={{ cursor: 'pointer' }}
-              >
-              <div 
-                className="activity-avatar" 
-                style={{ background: getSeverityColor(incident.severity) }}
-              >
-                <IconComponent size={20} color="white" />
-              </div>
-              
-              <div className="activity-content">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
-                  <span className="activity-title">{incident.title}</span>
-                  {incident.verified && (
-                    <motion.div 
-                      style={{ 
-                        width: '16px', 
-                        height: '16px', 
-                        background: 'var(--twitter-green)', 
-                        borderRadius: 'var(--radius-full)', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }} 
-                      initial={{ scale: 0 }} 
-                      animate={{ scale: 1 }} 
-                      transition={{ delay: 0.5 }}
-                    >
-                      <CheckCircle size={10} color="white" />
-                    </motion.div>
-                  )}
-                  <motion.div
-                    style={{
-                      padding: 'var(--spacing-xs) var(--spacing-sm)',
-                      background: getPriorityColor(incident.priority),
-                      color: 'white',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)',
+          <div style={{ padding: 'var(--spacing-lg)' }}>
+            {incidents.map((incident, index) => {
+              const IconComponent = getIcon(incident.category)
+              const severityColor = getSeverityColor(incident.severity)
+
+              return (
+                <motion.div
+                  key={incident._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  style={{
+                    backgroundColor: isDark ? '#111' : '#fff',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: 'var(--spacing-lg)',
+                    marginBottom: 'var(--spacing-lg)',
+                    border: `1px solid ${isDark ? '#333' : '#eee'}`
+                  }}
+                >
+                  {/* Header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--spacing-sm)',
+                    marginBottom: 'var(--spacing-md)'
+                  }}>
+                    <div style={{
+                      padding: 'var(--spacing-xs)',
+                      backgroundColor: severityColor + '20',
+                      borderRadius: 'var(--radius-sm)'
+                    }}>
+                      <IconComponent size={16} style={{ color: severityColor }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ 
+                        color: isDark ? '#fff' : '#000',
+                        margin: 0,
+                        fontSize: '1rem'
+                      }}>
+                        {incident.category}
+                      </h4>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-xs)',
+                        color: isDark ? '#888' : '#666',
+                        fontSize: '0.8rem'
+                      }}>
+                        <MapPin size={12} />
+                        <span>{incident.locationName || 'Unknown location'}</span>
+                        {incident.distance_km && (
+                          <span>• {incident.distance_km}km away</span>
+                        )}
+                        <Clock size={12} />
+                        <span>{getTimeAgo(incident.createdAt)}</span>
+                      </div>
+                    </div>
+                    {incident.confidence_score >= 70 && (
+                      <CheckCircle size={16} style={{ color: '#00ba7c' }} />
+                    )}
+                    <div style={{
+                      padding: 'var(--spacing-xs)',
+                      backgroundColor: incident.confidence_score >= 70 ? '#00ba7c20' : '#ffd40020',
+                      borderRadius: 'var(--radius-xs)',
+                      fontSize: '0.7rem',
                       fontWeight: '600',
-                      flexShrink: 0
-                    }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    P{incident.priority}
-                  </motion.div>
-                </div>
-                <p style={{ fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)', color: 'var(--twitter-black)', marginBottom: 'var(--spacing-sm)', lineHeight: 1.4 }}>
-                  {incident.description}
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', fontSize: 'clamp(0.7rem, 3vw, 0.75rem)', color: 'var(--twitter-dark-gray)', flexWrap: 'wrap' }}>
-                  <span>{incident.time}</span>
-                  <span>•</span>
-                  <span style={{ wordBreak: 'break-word' }}>{incident.location}</span>
-                </div>
-                
-                <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)', flexWrap: 'wrap' }}>
-                  <motion.button 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleReaction(incident.id, 'like')
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 'var(--spacing-xs)', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: (incidentReactions[incident.id]?.liked ? 'var(--twitter-blue)' : 'var(--twitter-dark-gray)'), 
-                      cursor: 'pointer', 
-                      fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)', 
-                      fontWeight: '500',
-                      padding: 'var(--spacing-xs)',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'all 0.2s ease',
-                      minHeight: '32px'
-                    }} 
-                    whileHover={{ scale: 1.1 }} 
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <ThumbsUp size={16} />
-                    {incident.upvotes}
-                  </motion.button>
-                  
-                  <motion.button 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleReaction(incident.id, 'dislike')
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 'var(--spacing-xs)', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: (incidentReactions[incident.id]?.disliked ? 'var(--twitter-red)' : 'var(--twitter-dark-gray)'), 
-                      cursor: 'pointer', 
-                      fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)', 
-                      fontWeight: '500',
-                      padding: 'var(--spacing-xs)',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'all 0.2s ease',
-                      minHeight: '32px'
-                    }} 
-                    whileHover={{ scale: 1.1 }} 
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <ThumbsDown size={16} />
-                    {incident.dislikes || 0}
-                  </motion.button>
-                  
-                  <motion.button 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setSelectedIncident(incident)
-                      setCommentFormOpen(true)
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 'var(--spacing-xs)', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'var(--twitter-dark-gray)', 
-                      cursor: 'pointer', 
-                      fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)', 
-                      fontWeight: '500',
-                      padding: 'var(--spacing-xs)',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'all 0.2s ease',
-                      minHeight: '32px'
-                    }} 
-                    whileHover={{ scale: 1.1 }} 
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <MessageCircle size={16} />
-                    {incident.comments}
-                  </motion.button>
-                  
-                  <motion.button 
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      // Handle share
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 'var(--spacing-xs)', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'var(--twitter-dark-gray)', 
-                      cursor: 'pointer', 
-                      fontSize: 'clamp(0.8rem, 3.5vw, 0.875rem)', 
-                      fontWeight: '500',
-                      padding: 'var(--spacing-xs)',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'all 0.2s ease',
-                      minHeight: '32px'
-                    }} 
-                    whileHover={{ scale: 1.1 }} 
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Share2 size={16} />
-                    Share
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-            </StackedDialogTrigger>
-          )
-        })
+                      color: incident.confidence_score >= 70 ? '#00ba7c' : '#ffd400'
+                    }}>
+                      {incident.confidence_score}%
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p style={{
+                    color: isDark ? '#ccc' : '#666',
+                    marginBottom: 'var(--spacing-md)',
+                    lineHeight: 1.5
+                  }}>
+                    {incident.description}
+                  </p>
+
+                  {/* Photo Display */}
+                  {incident.photo_url && (
+                    <div style={{ 
+                      marginBottom: 'var(--spacing-md)',
+                      borderRadius: 'var(--radius-md)',
+                      overflow: 'hidden',
+                      border: `1px solid ${isDark ? '#333' : '#eee'}`
+                    }}>
+                      <img
+                        src={`http://localhost:8080${incident.photo_url}`}
+                        alt="Incident evidence"
+                        style={{
+                          width: '100%',
+                          height: '200px',
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(`http://localhost:8080${incident.photo_url}`, '_blank')}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-xs)',
+                        padding: 'var(--spacing-sm)',
+                        backgroundColor: isDark ? '#0a0a0a' : '#f9f9f9',
+                        fontSize: '0.8rem',
+                        color: isDark ? '#888' : '#666'
+                      }}>
+                        <Camera size={12} />
+                        <span>Evidence photo • Click to view full size</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Author */}
+                  <div style={{
+                    fontSize: '0.8rem',
+                    color: isDark ? '#888' : '#666',
+                    marginBottom: 'var(--spacing-md)'
+                  }}>
+                    Reported by {incident.author}
+                    {incident.author_city && ` from ${incident.author_city}`}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--spacing-lg)'
+                  }}>
+                    <button style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--spacing-xs)',
+                      background: 'none',
+                      border: 'none',
+                      color: isDark ? '#888' : '#666',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}>
+                      <ThumbsUp size={16} />
+                      <span>{incident.upvotes || 0}</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => openComments(incident)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-xs)',
+                        background: 'none',
+                        border: 'none',
+                        color: isDark ? '#888' : '#666',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      <MessageCircle size={16} />
+                      <span>{incident.comments_count || 0}</span>
+                    </button>
+                    
+                    <button style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--spacing-xs)',
+                      background: 'none',
+                      border: 'none',
+                      color: isDark ? '#888' : '#666',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}>
+                      <Share2 size={16} />
+                      <span>Share</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      <BottomNavigation activeTab="home" onNavigate={onNavigate} />
-      
-      {/* Stacked Dialog */}
-      <StackedDialog />
-      
-      {/* Comment Form */}
+      {/* Comments Modal */}
       {selectedIncident && (
-        <CommentForm
-          open={commentFormOpen}
-          setOpen={setCommentFormOpen}
-          incidentTitle={selectedIncident.title}
-        />
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'flex-end',
+          zIndex: 1000
+        }}>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            style={{
+              width: '100%',
+              maxHeight: '80vh',
+              backgroundColor: isDark ? '#111' : '#fff',
+              borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+              padding: 'var(--spacing-lg)',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 'var(--spacing-lg)',
+              paddingBottom: 'var(--spacing-md)',
+              borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                <MessageCircle size={20} style={{ color: '#1d9bf0' }} />
+                <h3 style={{ color: isDark ? '#fff' : '#000', margin: 0 }}>
+                  Comments ({comments.length})
+                </h3>
+              </div>
+              <button
+                onClick={closeComments}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: isDark ? '#888' : '#666'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Comment Form */}
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment..."
+                  rows={3}
+                  style={{
+                    flex: 1,
+                    padding: 'var(--spacing-md)',
+                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: isDark ? '#0a0a0a' : '#f9f9f9',
+                    color: isDark ? '#fff' : '#000',
+                    fontSize: '0.9rem',
+                    resize: 'vertical'
+                  }}
+                />
+                <button
+                  onClick={() => handleCommentSubmit(selectedIncident)}
+                  disabled={isSubmittingComment || !newComment.trim()}
+                  style={{
+                    padding: 'var(--spacing-sm)',
+                    backgroundColor: '#1d9bf0',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: isSubmittingComment || !newComment.trim() ? 'not-allowed' : 'pointer',
+                    opacity: isSubmittingComment || !newComment.trim() ? 0.6 : 1,
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  {isSubmittingComment ? '...' : 'Post'}
+                </button>
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div>
+              {comments.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: isDark ? '#888' : '#666' }}>
+                  No comments yet. Be the first to comment!
+                </div>
+              ) : (
+                comments.map((comment) => (
+                  <div
+                    key={comment._id}
+                    style={{
+                      padding: 'var(--spacing-md)',
+                      borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
+                      marginBottom: 'var(--spacing-sm)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-sm)' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: '#1d9bf0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: '#fff'
+                      }}>
+                        {comment.author[0].toUpperCase()}
+                      </div>
+                      
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-xs)' }}>
+                          <span style={{ 
+                            fontWeight: '600', 
+                            color: isDark ? '#fff' : '#000',
+                            fontSize: '0.9rem'
+                          }}>
+                            {comment.author}
+                          </span>
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            color: isDark ? '#888' : '#666' 
+                          }}>
+                            {getTimeAgo(comment.createdAt)}
+                          </span>
+                        </div>
+                        <p style={{ 
+                          color: isDark ? '#ccc' : '#666',
+                          margin: 0,
+                          fontSize: '0.9rem'
+                        }}>
+                          {comment.body}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        </div>
       )}
+
+      <BottomNavigation current="home" onNavigate={onNavigate} />
     </div>
   )
 }
