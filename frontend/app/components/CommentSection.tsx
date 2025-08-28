@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { MessageCircle, Send, Trash2, User } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
@@ -25,11 +25,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
 
   const currentUserId = localStorage.getItem('user_id')
 
-  useEffect(() => {
-    fetchComments()
-  }, [postId])
-
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/comments/${postId}`)
@@ -43,7 +39,11 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [postId])
+
+  useEffect(() => {
+    fetchComments()
+  }, [fetchComments])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

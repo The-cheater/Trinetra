@@ -1,23 +1,26 @@
 import express from 'express';
-import { body } from 'express-validator';
-import { register, login } from '../controllers/authController.js';
-import { handleValidationErrors } from '../middleware/validation.js';
+import { 
+  login, 
+  register, 
+  refreshToken, 
+  verifyToken,
+  getProfile, 
+  logout, 
+  logoutAll 
+} from '../controllers/authController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Validation middleware
-const registerValidation = [
-  body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
-  body('email').isEmail().withMessage('Valid email required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-];
+// Public routes
+router.post('/register', register);
+router.post('/login', login);
+router.post('/refresh-token', refreshToken);
+router.post('/verify-token', verifyToken);
 
-const loginValidation = [
-  body('email').isEmail().withMessage('Valid email required'),
-  body('password').notEmpty().withMessage('Password is required')
-];
-
-router.post('/register', registerValidation, handleValidationErrors, register);
-router.post('/login', loginValidation, handleValidationErrors, login);
+// Protected routes
+router.get('/profile', authenticateToken, getProfile);
+router.post('/logout', authenticateToken, logout);
+router.post('/logout-all', authenticateToken, logoutAll);
 
 export default router;

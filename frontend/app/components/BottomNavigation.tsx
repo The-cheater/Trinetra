@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Home, Plus, Bell, User, Map } from 'lucide-react'
+import { Plus, Bell, User, Map } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 
 type Page = 'home' | 'maps' | 'contribute' | 'profile'

@@ -2,20 +2,20 @@ import mongoose from 'mongoose';
 
 const postSchema = new mongoose.Schema({
   userId: {
-    type: String, // Changed to String to match your auth system
+    type: String,
     required: true,
-    index: true // Add index for better query performance
+    index: true
   },
   category: {
     type: String,
     required: true,
     enum: ['Traffic', 'Road Work', 'Accident', 'Flood', 'Public Event', 'Hazard', 'Other'],
-    index: true // Add index for filtering
+    index: true
   },
   description: {
     type: String,
     required: true,
-    maxlength: 500 // Reasonable limit
+    maxlength: 500
   },
   location: {
     type: {
@@ -25,13 +25,13 @@ const postSchema = new mongoose.Schema({
       required: true
     },
     coordinates: {
-      type: [Number], // [longitude, latitude] - GeoJSON standard
+      type: [Number],
       required: true,
       validate: {
         validator: function(coords) {
-          return coords.length === 2 && 
-                 coords[0] >= -180 && coords[0] <= 180 && // longitude
-                 coords[1] >= -90 && coords[1] <= 90;     // latitude
+          return coords.length === 2 &&
+            coords[0] >= -180 && coords[0] <= 180 &&
+            coords[1] >= -90 && coords[1] <= 90;
         },
         message: 'Coordinates must be [longitude, latitude] with valid ranges'
       }
@@ -39,19 +39,19 @@ const postSchema = new mongoose.Schema({
   },
   locationName: {
     type: String,
-    maxlength: 200 // Reasonable limit for location names
+    maxlength: 200
   },
   severity: {
     type: String,
     enum: ['Low', 'Medium', 'High'],
     default: 'Medium',
-    index: true // Add index for filtering
+    index: true
   },
   photo_url: {
     type: String,
     validate: {
       validator: function(url) {
-        return !url || /^\/uploads\//.test(url); // Validate upload path format
+        return !url || /^\/uploads\//.test(url);
       },
       message: 'Invalid photo URL format'
     }
@@ -61,17 +61,50 @@ const postSchema = new mongoose.Schema({
     min: 0,
     max: 100,
     default: 0,
-    index: true // Add index for sorting by confidence
+    index: true
   },
   status: {
     type: String,
     enum: ['verified', 'unverified', 'rejected'],
     default: 'unverified',
-    index: true // Add index for filtering by status
+    index: true
   },
-  verification_reason: {
-    type: String,
-    maxlength: 200
+  // Enhanced Google Vision API Analysis
+  vision_analysis: {
+    analyzed: { type: Boolean, default: false },
+    credibility_score: { type: Number, min: 0, max: 100 },
+    labels: [{ 
+      name: String, 
+      confidence: Number,
+      topicality: Number 
+    }],
+    text_annotations: [{
+      description: String,
+      confidence: Number
+    }],
+    safe_search: {
+      adult: String,
+      medical: String,
+      spoofed: String,
+      violence: String,
+      racy: String,
+      overall_safety: String
+    },
+    object_detection: [{
+      name: String,
+      confidence: Number,
+      bounding_box: {
+        x1: Number, y1: Number,
+        x2: Number, y2: Number
+      }
+    }],
+    image_properties: {
+      colors: [{ red: Number, green: Number, blue: Number, pixelFraction: Number }],
+      brightness: Number,
+      contrast: Number
+    },
+    analysis_timestamp: { type: Date, default: Date.now },
+    processing_time_ms: Number
   },
   evidence: [{
     source: {
@@ -92,15 +125,13 @@ const postSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  // Add author information for better UX
   author: {
-    type: String, // User's name
+    type: String,
     required: true
   },
   author_city: {
-    type: String // Optional city info
+    type: String
   },
-  // Engagement metrics
   upvotes: {
     type: Number,
     default: 0,
@@ -116,39 +147,32 @@ const postSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
-  // Auto-expiry for cleanup
   expiresAt: {
     type: Date,
-    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
-    index: { expireAfterSeconds: 0 } // TTL index
+    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    index: { expireAfterSeconds: 0 }
   }
 }, {
-  timestamps: true, // Automatically manage createdAt and updatedAt
-  versionKey: false // Disable __v field
+  timestamps: true,
+  versionKey: false
 });
 
-// Indexes for better query performance
-postSchema.index({ location: '2dsphere' }); // Geospatial queries
-postSchema.index({ createdAt: -1 }); // Recent posts first
-postSchema.index({ status: 1, createdAt: -1 }); // Filter by status and sort by date
-postSchema.index({ category: 1, createdAt: -1 }); // Filter by category and sort by date
-postSchema.index({ userId: 1, createdAt: -1 }); // User's posts
-postSchema.index({ expiresAt: 1 }); // TTL index for cleanup
+// Indexes
+postSchema.index({ location: '2dsphere' });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ status: 1, createdAt: -1 });
+postSchema.index({ category: 1, createdAt: -1 });
+postSchema.index({ userId: 1, createdAt: -1 });
+postSchema.index({ 'vision_analysis.analyzed': 1 });
+postSchema.index({ 'vision_analysis.credibility_score': -1 });
 
-// Virtual for distance (will be populated during queries)
-postSchema.virtual('distance_km').get(function() {
-  return this._distance_km;
-});
-
-// Transform output to include virtuals and format data
+// Transform output
 postSchema.set('toJSON', {
   virtuals: true,
   transform: function(doc, ret) {
-    // Format the response
     ret.id = ret._id;
     delete ret._id;
     
-    // Format location for easier use
     if (ret.location && ret.location.coordinates) {
       ret.coordinates = {
         lat: ret.location.coordinates[1],
@@ -156,74 +180,12 @@ postSchema.set('toJSON', {
       };
     }
     
-    // Format dates
     if (ret.createdAt) {
       ret.created_at = ret.createdAt;
-    }
-    if (ret.updatedAt) {
-      ret.updated_at = ret.updatedAt;
     }
     
     return ret;
   }
 });
-
-// Pre-save middleware to update related counts
-postSchema.pre('save', function(next) {
-  // Calculate confidence score if not set
-  if (this.isNew && !this.confidence_score) {
-    let score = 50; // Base score
-    
-    if (this.photo_url) score += 20; // Has photo evidence
-    if (this.locationName && this.locationName.trim()) score += 10; // Named location
-    if (this.description && this.description.length > 50) score += 10; // Detailed description
-    if (this.evidence && this.evidence.length > 0) score += 10; // Additional evidence
-    
-    this.confidence_score = Math.min(score, 100);
-    
-    // Set status based on confidence
-    if (this.confidence_score >= 80) {
-      this.status = 'verified';
-    } else if (this.confidence_score >= 60) {
-      this.status = 'unverified';
-    }
-  }
-  
-  next();
-});
-
-// Static methods for common queries
-postSchema.statics.findNearby = function(lat, lng, radiusKm = 10, filters = {}) {
-  const query = {
-    location: {
-      $near: {
-        $geometry: {
-          type: 'Point',
-          coordinates: [lng, lat] // [longitude, latitude]
-        },
-        $maxDistance: radiusKm * 1000 // Convert km to meters
-      }
-    },
-    ...filters
-  };
-  
-  return this.find(query);
-};
-
-postSchema.statics.findByCategory = function(category, limit = 20) {
-  return this.find({ category, status: { $ne: 'rejected' } })
-             .sort({ createdAt: -1 })
-             .limit(limit);
-};
-
-postSchema.statics.findRecent = function(hours = 24, limit = 50) {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-  return this.find({ 
-    createdAt: { $gte: since },
-    status: { $ne: 'rejected' }
-  })
-  .sort({ createdAt: -1 })
-  .limit(limit);
-};
 
 export default mongoose.model('Post', postSchema);

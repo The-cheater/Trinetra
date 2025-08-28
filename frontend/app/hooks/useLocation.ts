@@ -14,6 +14,15 @@ export interface LocationInfo {
   formatted_address?: string
 }
 
+interface LocationUpdateResponse {
+  location?: {
+    city?: string
+    state?: string
+    country?: string
+    formatted_address?: string
+  }
+}
+
 interface UseLocationOptions {
   enableHighAccuracy?: boolean
   timeout?: number
@@ -94,7 +103,7 @@ export const useLocation = (options: UseLocationOptions = {}) => {
         return false
       }
 
-      const response = await apiService.put('/api/location/update', coords)
+      const response = await apiService.put<LocationUpdateResponse>('/api/location/update', coords)
       
       if (response.success && response.data) {
         setLocation({

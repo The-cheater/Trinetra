@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Camera, AlertTriangle, Construction, Car, MapPin, Send, Upload, Search, Locate } from 'lucide-react'
+import { Camera, AlertTriangle, Construction, Car, MapPin, Send, Upload, Search, Locate, Brain } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
+import CredibilityPopup from '../components/CredibilityPopup'
 import { useTheme } from '../contexts/ThemeContext'
+import toast, { Toaster } from 'react-hot-toast'
 
 type Page = 'home' | 'maps' | 'contribute' | 'profile'
 
@@ -27,6 +29,10 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
   const [error, setError] = useState('')
   const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  
+  // Credibility popup state
+  const [showCredibilityPopup, setShowCredibilityPopup] = useState(false)
+  const [credibilityData, setCredibilityData] = useState<any>(null)
 
   const categories = [
     { id: 'Traffic', name: 'Traffic', icon: Car, color: '#F4212E' },
@@ -46,80 +52,66 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
           }
           setCurrentLocation(coords)
           
-          // Reverse geocode to get place name
+          // Reverse geocode using Nominatim (free alternative)
           try {
             const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`
             )
             const data = await response.json()
-            if (data.results && data.results[0]) {
-              setFormData(prev => ({ 
-                ...prev, 
-                locationName: data.results[0].formatted_address 
+            if (data.display_name) {
+              setFormData(prev => ({
+                ...prev,
+                locationName: data.display_name.split(',')[0] || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
               }))
             }
           } catch (error) {
             console.error('Reverse geocoding failed:', error)
-            setFormData(prev => ({ 
-              ...prev, 
-              locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` 
+            setFormData(prev => ({
+              ...prev,
+              locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
             }))
           }
         },
         (error) => {
           console.error('Location error:', error)
-          setError('Unable to get current location. Please enable location services.')
+          toast.error('Unable to get current location. Please enable location services.')
         }
       )
     }
   }, [])
 
   const searchPlaces = async (query: string) => {
-    if (!query.trim() || !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return
-
+    if (!query.trim() || query.length < 3) return
+    
     setIsSearching(true)
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&components=country:in`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`
       )
       const data = await response.json()
-      
-      if (data.predictions) {
-        setPlaceSuggestions(data.predictions.slice(0, 5))
-      }
+      setPlaceSuggestions(data || [])
     } catch (error) {
       console.error('Places search error:', error)
+      toast.error('Failed to search places')
     } finally {
       setIsSearching(false)
     }
   }
 
-  const selectPlace = async (placeId: string, description: string) => {
-    setFormData(prev => ({ ...prev, locationName: description }))
+  const selectPlace = async (place: any) => {
+    setFormData(prev => ({ ...prev, locationName: place.display_name }))
     setPlaceSuggestions([])
-
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-      )
-      const data = await response.json()
-      
-      if (data.result?.geometry?.location) {
-        setCurrentLocation({
-          lat: data.result.geometry.location.lat,
-          lng: data.result.geometry.location.lng
-        })
-      }
-    } catch (error) {
-      console.error('Place details error:', error)
-    }
+    setCurrentLocation({
+      lat: parseFloat(place.lat),
+      lng: parseFloat(place.lon)
+    })
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     setError('')
-
+    
     if (name === 'locationName' && value.length > 2) {
       searchPlaces(value)
     } else if (name === 'locationName') {
@@ -129,31 +121,50 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedPhoto(e.target.files[0])
+      const file = e.target.files[0]
+      
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be smaller than 5MB')
+        return
+      }
+      
+      setSelectedPhoto(file)
+      toast.success('Image selected for AI analysis')
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.category || !formData.description) {
       setError('Please fill in all required fields')
+      toast.error('Please fill in all required fields')
       return
     }
 
     if (!currentLocation) {
       setError('Location is required. Please enable location services or search for a place.')
+      toast.error('Location is required')
       return
     }
 
     const token = localStorage.getItem('auth_token')
     if (!token) {
       setError('Please login first')
+      toast.error('Please login first')
       return
     }
 
     setIsSubmitting(true)
     setError('')
+
+    // Show loading toast for AI analysis
+    const loadingToastId = toast.loading(
+      selectedPhoto 
+        ? 'Analyzing with AI and Vision API...' 
+        : 'Analyzing with Gemini AI...'
+    )
 
     try {
       const formDataToSend = new FormData()
@@ -176,9 +187,18 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
       })
 
       const data = await response.json()
+      
+      toast.dismiss(loadingToastId)
 
       if (response.ok && data.success) {
-        alert(`Report submitted successfully! AI Confidence Score: ${data.data.confidence_score}% (AI Analysis: ${data.data.ai_score}%)`)
+        // Show success toast
+        toast.success('Report submitted successfully!')
+        
+        // Set credibility data and show popup
+        setCredibilityData(data.data)
+        setShowCredibilityPopup(true)
+
+        // Reset form
         setFormData({
           category: '',
           severity: 'Medium',
@@ -186,15 +206,25 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
           locationName: ''
         })
         setSelectedPhoto(null)
-        onNavigate('home')
+        
       } else {
         setError(data.message || 'Failed to submit report')
+        toast.error(data.message || 'Failed to submit report')
       }
+
     } catch (error) {
+      toast.dismiss(loadingToastId)
       setError('Network error. Please try again.')
+      toast.error('Network error. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleCredibilityPopupClose = () => {
+    setShowCredibilityPopup(false)
+    setCredibilityData(null)
+    onNavigate('home')
   }
 
   return (
@@ -202,16 +232,17 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
       minHeight: '100vh', 
       backgroundColor: isDark ? '#000' : '#fff',
       display: 'flex',
-      flexDirection: 'column',
-      position: 'relative'
+      flexDirection: 'column'
     }}>
+      <Toaster position="top-center" />
+      
       {/* Header - Fixed */}
       <div style={{
         padding: 'var(--spacing-lg)',
         borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
-        backgroundColor: isDark ? '#000' : '#fff',
         position: 'sticky',
         top: 0,
+        backgroundColor: isDark ? '#000' : '#fff',
         zIndex: 10
       }}>
         <Logo />
@@ -222,385 +253,420 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
         }}>
           Report Incident
         </h1>
+        <p style={{
+          color: isDark ? '#888' : '#666',
+          fontSize: '0.9rem',
+          margin: 'var(--spacing-xs) 0 0 0'
+        }}>
+          AI-powered credibility analysis with Google Vision API
+        </p>
       </div>
 
       {/* Scrollable Content Area */}
       <div style={{ 
-        flex: 1,
-        overflowY: 'auto',
-        paddingBottom: '100px',
-        WebkitOverflowScrolling: 'touch'
+        flex: 1, 
+        padding: 'var(--spacing-lg)', 
+        paddingBottom: '120px',
+        overflowY: 'auto' 
       }}>
-        <div style={{ padding: 'var(--spacing-lg)' }}>
-          <form onSubmit={handleSubmit} style={{ maxWidth: '500px', margin: '0 auto' }}>
-            {error && (
-              <div style={{
-                padding: 'var(--spacing-md)',
-                backgroundColor: '#fee',
-                border: '1px solid #fcc',
-                borderRadius: 'var(--radius-sm)',
-                color: '#c33',
-                marginBottom: 'var(--spacing-lg)'
-              }}>
-                {error}
-              </div>
-            )}
+        {error && (
+          <div style={{
+            padding: 'var(--spacing-md)',
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: 'var(--radius-sm)',
+            color: '#c33',
+            marginBottom: 'var(--spacing-lg)'
+          }}>
+            {error}
+          </div>
+        )}
 
-            {/* Category Selection */}
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h3 style={{ 
-                marginBottom: 'var(--spacing-md)',
-                color: isDark ? '#fff' : '#000'
-              }}>
-                Incident Category *
-              </h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(2, 1fr)', 
-                gap: 'var(--spacing-md)' 
-              }}>
-                {categories.map((category) => {
-                  const IconComponent = category.icon
-                  const isSelected = formData.category === category.id
-                  return (
-                    <motion.button
-                      key={category.id}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, category: category.id })}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      style={{
-                        padding: 'var(--spacing-lg)',
-                        backgroundColor: isSelected ? `${category.color}20` : 'transparent',
-                        border: `2px solid ${isSelected ? category.color : (isDark ? '#333' : '#e1e8ed')}`,
-                        borderRadius: 'var(--radius-md)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 'var(--spacing-sm)',
-                        cursor: 'pointer',
-                        color: isSelected ? category.color : (isDark ? '#fff' : '#000'),
-                        minHeight: '100px'
-                      }}
-                    >
-                      <IconComponent size={32} />
-                      <span style={{ fontWeight: '600' }}>{category.name}</span>
-                    </motion.button>
-                  )
-                })}
-              </div>
-            </div>
+        {/* Category Selection */}
+        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: 'var(--spacing-md)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            Incident Category *
+          </label>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: 'var(--spacing-md)'
+          }}>
+            {categories.map((category) => {
+              const IconComponent = category.icon
+              const isSelected = formData.category === category.id
 
-            {/* Severity */}
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h3 style={{ 
-                marginBottom: 'var(--spacing-md)',
-                color: isDark ? '#fff' : '#000'
-              }}>
-                Severity Level
-              </h3>
-              <div style={{ 
-                display: 'flex', 
-                gap: 'var(--spacing-sm)',
-                backgroundColor: isDark ? '#111' : '#f7f9fa',
-                borderRadius: 'var(--radius-sm)',
-                padding: 'var(--spacing-xs)'
-              }}>
-                {['Low', 'Medium', 'High'].map((level) => (
-                  <motion.button
-                    key={level}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, severity: level })}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      flex: 1,
-                      padding: 'var(--spacing-sm)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-xs)',
-                      backgroundColor: formData.severity === level ? '#1d9bf0' : 'transparent',
-                      color: formData.severity === level ? '#fff' : (isDark ? '#888' : '#666'),
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {level}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Enhanced Location with Places Search */}
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h3 style={{ 
-                marginBottom: 'var(--spacing-md)',
-                color: isDark ? '#fff' : '#000'
-              }}>
-                Location *
-              </h3>
-              
-              {/* Address Search Input */}
-              <div style={{ position: 'relative', marginBottom: 'var(--spacing-md)' }}>
-                <input
-                  type="text"
-                  name="locationName"
-                  value={formData.locationName}
-                  onChange={handleChange}
-                  placeholder="Search for a place or address..."
+              return (
+                <motion.button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, category: category.id })}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   style={{
-                    width: '100%',
-                    padding: 'var(--spacing-md) 2.5rem var(--spacing-md) var(--spacing-md)',
-                    border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+                    padding: 'var(--spacing-lg)',
+                    backgroundColor: isSelected ? `${category.color}20` : 'transparent',
+                    border: `2px solid ${isSelected ? category.color : (isDark ? '#333' : '#e1e8ed')}`,
                     borderRadius: 'var(--radius-md)',
-                    backgroundColor: isDark ? '#111' : '#fff',
-                    color: isDark ? '#fff' : '#000',
-                    fontSize: '1rem'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 'var(--spacing-sm)',
+                    cursor: 'pointer',
+                    color: isSelected ? category.color : (isDark ? '#fff' : '#000'),
+                    minHeight: '100px'
                   }}
-                />
-                <Search size={20} style={{
-                  position: 'absolute',
-                  right: 'var(--spacing-md)',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: isDark ? '#666' : '#999'
-                }} />
+                >
+                  <IconComponent size={24} />
+                  <span style={{ fontWeight: '600' }}>{category.name}</span>
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
 
-                {/* Place Suggestions */}
-                {placeSuggestions.length > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    backgroundColor: isDark ? '#111' : '#fff',
-                    border: `1px solid ${isDark ? '#333' : '#ccc'}`,
-                    borderRadius: 'var(--radius-md)',
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    zIndex: 1000
-                  }}>
-                    {placeSuggestions.map((suggestion) => (
-                      <div
-                        key={suggestion.place_id}
-                        onClick={() => selectPlace(suggestion.place_id, suggestion.description)}
-                        style={{
-                          padding: 'var(--spacing-md)',
-                          cursor: 'pointer',
-                          borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
-                          color: isDark ? '#fff' : '#000'
-                        }}
-                      >
-                        <div style={{ fontWeight: '600' }}>
-                          {suggestion.structured_formatting?.main_text || suggestion.description}
-                        </div>
-                        {suggestion.structured_formatting?.secondary_text && (
-                          <div style={{ fontSize: '0.8rem', color: isDark ? '#888' : '#666' }}>
-                            {suggestion.structured_formatting.secondary_text}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Current Location Button */}
+        {/* Severity */}
+        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: 'var(--spacing-md)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            Severity Level
+          </label>
+          <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+            {['Low', 'Medium', 'High'].map((level) => (
               <motion.button
+                key={level}
                 type="button"
-                onClick={async () => {
-                  if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                      async (position) => {
-                        const coords = {
-                          lat: position.coords.latitude,
-                          lng: position.coords.longitude
-                        }
-                        setCurrentLocation(coords)
-                        
-                        try {
-                          const response = await fetch(
-                            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-                          )
-                          const data = await response.json()
-                          if (data.results && data.results[0]) {
-                            setFormData({ 
-                              ...formData, 
-                              locationName: data.results[0].formatted_address 
-                            })
-                          }
-                        } catch (error) {
-                          console.error('Reverse geocoding failed:', error)
-                          setFormData({ 
-                            ...formData, 
-                            locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` 
-                          })
-                        }
-                      }
-                    )
-                  }
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                onClick={() => setFormData({ ...formData, severity: level })}
+                whileTap={{ scale: 0.95 }}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--spacing-sm)',
-                  padding: 'var(--spacing-sm) var(--spacing-md)',
-                  backgroundColor: isDark ? '#111' : '#f7f9fa',
-                  border: `1px solid ${isDark ? '#333' : '#ddd'}`,
-                  borderRadius: 'var(--radius-sm)',
-                  color: isDark ? '#fff' : '#000',
+                  flex: 1,
+                  padding: 'var(--spacing-sm)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-xs)',
+                  backgroundColor: formData.severity === level ? '#1d9bf0' : 'transparent',
+                  color: formData.severity === level ? '#fff' : (isDark ? '#888' : '#666'),
+                  fontWeight: '600',
                   cursor: 'pointer'
                 }}
               >
-                <Locate size={16} />
-                <span>Use Current Location</span>
+                {level}
               </motion.button>
+            ))}
+          </div>
+        </div>
 
-              {/* Coordinates Display */}
-              {currentLocation && (
-                <div style={{
-                  marginTop: 'var(--spacing-sm)',
-                  padding: 'var(--spacing-sm)',
-                  backgroundColor: isDark ? '#0a0a0a' : '#f0f0f0',
-                  borderRadius: 'var(--radius-xs)',
-                  fontSize: '0.8rem',
-                  color: isDark ? '#888' : '#666'
-                }}>
-                  📍 {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
-                </div>
-              )}
-            </div>
+        {/* Enhanced Location with Places Search */}
+        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: 'var(--spacing-md)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            Location *
+          </label>
 
-            {/* Description */}
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h3 style={{ 
-                marginBottom: 'var(--spacing-md)',
-                color: isDark ? '#fff' : '#000'
-              }}>
-                Description *
-              </h3>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Describe the incident in detail... (AI will analyze your description for credibility)"
-                required
-                style={{
-                  width: '100%',
-                  padding: 'var(--spacing-md)',
-                  border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: isDark ? '#111' : '#fff',
-                  color: isDark ? '#fff' : '#000',
-                  fontSize: '1rem',
-                  resize: 'vertical',
-                  minHeight: '100px'
-                }}
-              />
-              <div style={{
-                fontSize: '0.8rem',
-                color: isDark ? '#888' : '#666',
-                marginTop: 'var(--spacing-xs)'
-              }}>
-                💡 Tip: More detailed descriptions receive higher credibility scores from AI analysis
-              </div>
-            </div>
-
-            {/* Photo Upload */}
-            <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-              <h3 style={{ 
-                marginBottom: 'var(--spacing-md)',
-                color: isDark ? '#fff' : '#000'
-              }}>
-                Add Photo (Optional - Increases credibility score)
-              </h3>
-              <div style={{
-                border: `2px dashed ${isDark ? '#333' : '#e1e8ed'}`,
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--spacing-xl)',
-                textAlign: 'center',
-                backgroundColor: isDark ? '#111' : '#f7f9fa'
-              }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  style={{ display: 'none' }}
-                  id="photo-upload"
-                />
-                <label htmlFor="photo-upload" style={{ cursor: 'pointer' }}>
-                  <Upload size={48} style={{ 
-                    color: isDark ? '#666' : '#999',
-                    marginBottom: 'var(--spacing-md)'
-                  }} />
-                  <p style={{ 
-                    color: isDark ? '#888' : '#666',
-                    margin: 0
-                  }}>
-                    {selectedPhoto ? selectedPhoto.name : 'Click to upload photo evidence'}
-                  </p>
-                  <p style={{ 
-                    color: isDark ? '#666' : '#999',
-                    margin: 'var(--spacing-xs) 0 0 0',
-                    fontSize: '0.8rem'
-                  }}>
-                    Photos significantly boost AI credibility scores
-                  </p>
-                </label>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <motion.button
-              type="submit"
-              disabled={isSubmitting}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+          {/* Address Search Input */}
+          <div style={{ position: 'relative', marginBottom: 'var(--spacing-md)' }}>
+            <Search size={20} style={{
+              position: 'absolute',
+              left: 'var(--spacing-md)',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: isDark ? '#666' : '#999',
+              zIndex: 2
+            }} />
+            <input
+              type="text"
+              name="locationName"
+              value={formData.locationName}
+              onChange={handleChange}
+              placeholder="Search for a location..."
               style={{
                 width: '100%',
-                padding: 'var(--spacing-lg)',
-                backgroundColor: isSubmitting ? '#666' : '#1d9bf0',
-                color: '#fff',
-                border: 'none',
+                padding: 'var(--spacing-md) 2.5rem',
+                border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
                 borderRadius: 'var(--radius-md)',
-                fontSize: '1.1rem',
-                fontWeight: '600',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                backgroundColor: isDark ? '#111' : '#fff',
+                color: isDark ? '#fff' : '#000'
+              }}
+            />
+            {isSearching && (
+              <div style={{
+                position: 'absolute',
+                right: 'var(--spacing-md)',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 2
+              }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid #1d9bf0',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+              </div>
+            )}
+          </div>
+
+          {/* Place Suggestions */}
+          {placeSuggestions.length > 0 && (
+            <div style={{
+              backgroundColor: isDark ? '#111' : '#fff',
+              border: `1px solid ${isDark ? '#333' : '#ccc'}`,
+              borderRadius: 'var(--radius-md)',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              marginBottom: 'var(--spacing-md)'
+            }}>
+              {placeSuggestions.map((suggestion, index) => (
+                <div
+                  key={index}
+                  onClick={() => selectPlace(suggestion)}
+                  style={{
+                    padding: 'var(--spacing-md)',
+                    cursor: 'pointer',
+                    borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
+                    color: isDark ? '#fff' : '#000'
+                  }}
+                >
+                  <div style={{ fontWeight: '600' }}>
+                    {suggestion.display_name.split(',')[0]}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: isDark ? '#888' : '#666' }}>
+                    {suggestion.display_name.split(',').slice(1, 3).join(', ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Current Location Button */}
+          <motion.button
+            type="button"
+            onClick={() => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  async (position) => {
+                    const coords = {
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude
+                    }
+                    setCurrentLocation(coords)
+                    try {
+                      const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`
+                      )
+                      const data = await response.json()
+                      setFormData({
+                        ...formData,
+                        locationName: data.display_name?.split(',')[0] || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                      })
+                    } catch (error) {
+                      setFormData({
+                        ...formData,
+                        locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                      })
+                    }
+                  },
+                  (error) => {
+                    toast.error('Unable to get current location')
+                  }
+                )
+              }
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--spacing-sm)',
+              padding: 'var(--spacing-sm) var(--spacing-md)',
+              backgroundColor: isDark ? '#111' : '#f7f9fa',
+              border: `1px solid ${isDark ? '#333' : '#ddd'}`,
+              borderRadius: 'var(--radius-sm)',
+              color: isDark ? '#fff' : '#000',
+              cursor: 'pointer'
+            }}
+          >
+            <Locate size={16} />
+            Use Current Location
+          </motion.button>
+
+          {/* Coordinates Display */}
+          {currentLocation && (
+            <div style={{
+              marginTop: 'var(--spacing-sm)',
+              fontSize: '0.8rem',
+              color: isDark ? '#888' : '#666'
+            }}>
+              📍 {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: 'var(--spacing-md)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            Description *
+          </label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Describe the incident in detail..."
+            rows={4}
+            style={{
+              width: '100%',
+              padding: 'var(--spacing-md)',
+              border: `2px solid ${isDark ? '#333' : '#e1e8ed'}`,
+              borderRadius: 'var(--radius-md)',
+              fontSize: '1rem',
+              backgroundColor: isDark ? '#111' : '#fff',
+              color: isDark ? '#fff' : '#000',
+              resize: 'vertical',
+              minHeight: '100px'
+            }}
+          />
+          <div style={{
+            marginTop: 'var(--spacing-xs)',
+            fontSize: '0.8rem',
+            color: isDark ? '#888' : '#666',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--spacing-xs)'
+          }}>
+            <Brain size={14} />
+            💡 Tip: More detailed descriptions receive higher credibility scores from AI analysis
+          </div>
+        </div>
+
+        {/* Photo Upload */}
+        <div style={{ marginBottom: 'var(--spacing-xl)' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: 'var(--spacing-md)',
+            color: isDark ? '#fff' : '#000',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            Add Photo (Optional - Increases credibility score)
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="photo-upload"
+            />
+            <label
+              htmlFor="photo-upload"
+              style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 'var(--spacing-sm)',
-                marginBottom: 'var(--spacing-xl)'
+                padding: 'var(--spacing-lg)',
+                border: `2px dashed ${isDark ? '#333' : '#ccc'}`,
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: isDark ? '#111' : '#f9f9f9',
+                color: isDark ? '#fff' : '#000',
+                cursor: 'pointer',
+                textAlign: 'center'
               }}
             >
-              {isSubmitting ? (
-                <>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '2px solid transparent',
-                    borderTop: '2px solid currentColor',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
-                  Analyzing with AI...
-                </>
-              ) : (
-                <>
-                  <Send size={20} />
-                  Submit Report for AI Analysis
-                </>
-              )}
-            </motion.button>
-          </form>
+              <Camera size={20} />
+              <span>{selectedPhoto ? selectedPhoto.name : 'Click to upload photo evidence'}</span>
+            </label>
+          </div>
+          <div style={{
+            marginTop: 'var(--spacing-xs)',
+            fontSize: '0.8rem',
+            color: isDark ? '#888' : '#666',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--spacing-xs)'
+          }}>
+            <Brain size={14} />
+            Photos significantly boost AI credibility scores through Google Vision analysis
+          </div>
         </div>
+
+        {/* Submit Button */}
+        <motion.button
+          type="submit"
+          onClick={handleSubmit}
+          disabled={isSubmitting || !formData.category || !formData.description || !currentLocation}
+          whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+          whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+          style={{
+            width: '100%',
+            padding: 'var(--spacing-lg)',
+            backgroundColor: isSubmitting ? '#666' : '#1d9bf0',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '1.1rem',
+            fontWeight: '600',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--spacing-sm)'
+          }}
+        >
+          {isSubmitting ? (
+            <>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid transparent',
+                borderTop: '2px solid currentColor',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              Analyzing with AI...
+            </>
+          ) : (
+            <>
+              <Brain size={20} />
+              Submit Report for AI Analysis
+            </>
+          )}
+        </motion.button>
       </div>
 
+      {/* Credibility Popup */}
+      <CredibilityPopup
+        isOpen={showCredibilityPopup}
+        onClose={handleCredibilityPopupClose}
+        data={credibilityData}
+      />
+
       {/* Fixed Bottom Navigation */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
-        <BottomNavigation current="contribute" onNavigate={onNavigate} />
-      </div>
+      <BottomNavigation current="contribute" onNavigate={onNavigate} />
     </div>
   )
 }

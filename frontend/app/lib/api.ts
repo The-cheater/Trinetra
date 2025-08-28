@@ -17,7 +17,7 @@ export interface AuthTokens {
 
 class ApiService {
   private baseURL: string
-  private defaultHeaders: HeadersInit
+  private defaultHeaders: Record<string, string>
 
   constructor() {
     this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
@@ -49,8 +49,8 @@ class ApiService {
   }
 
   // Get headers with auth token
-  private getHeaders(includeAuth: boolean = true): HeadersInit {
-    const headers = { ...this.defaultHeaders }
+  private getHeaders(includeAuth: boolean = true): Record<string, string> {
+    const headers: Record<string, string> = { ...this.defaultHeaders }
     
     if (includeAuth) {
       const token = this.getAuthToken()
@@ -105,7 +105,7 @@ class ApiService {
     includeAuth: boolean = true
   ): Promise<ApiResponse<T>> {
     const body = data instanceof FormData ? data : JSON.stringify(data)
-    const headers = data instanceof FormData ? {} : { 'Content-Type': 'application/json' }
+    const headers: Record<string, string> = data instanceof FormData ? {} : { 'Content-Type': 'application/json' }
     
     return this.request<T>(
       endpoint,

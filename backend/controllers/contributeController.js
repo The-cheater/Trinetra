@@ -2,11 +2,16 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import vision from '@google-cloud/vision';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
 
-// Initialize Gemini AI
+// Initialize AI services
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const visionClient = new vision.ImageAnnotatorClient({
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  projectId: process.env.GOOGLE_PROJECT_ID
+});
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -40,10 +45,159 @@ export const upload = multer({
   fileFilter: fileFilter
 });
 
-// AI-powered credibility scoring
+// Google Vision API Analysis
+const analyzeImageWithVision = async (imagePath) => {
+  const startTime = Date.now();
+  
+  try {
+    console.log('🔍 Starting Google Vision API analysis for:', imagePath);
+    
+    // Run multiple detection features
+    const [labelResult] = await visionClient.labelDetection(imagePath);
+    const [textResult] = await visionClient.textDetection(imagePath);
+    const [safeSearchResult] = await visionClient.safeSearchDetection(imagePath);
+    const [objectResult] = await visionClient.objectLocalization(imagePath);
+    const [propertiesResult] = await visionClient.imageProperties(imagePath);
+
+    // Process labels
+    const labels = labelResult.labelAnnotations?.map(label => ({
+      name: label.description,
+      confidence: Math.round(label.score * 100),
+      topicality: Math.round(label.topicalityScore * 100)
+    })) || [];
+
+    // Process text annotations
+    const textAnnotations = textResult.textAnnotations?.slice(0, 5).map(text => ({
+      description: text.description?.substring(0, 100),
+      confidence: Math.round((text.confidence || 0.5) * 100)
+    })) || [];
+
+    // Process safe search
+    const safeSearch = safeSearchResult.safeSearchAnnotation;
+    const safetyLevels = {
+      'VERY_UNLIKELY': 5, 'UNLIKELY': 4, 'POSSIBLE': 3, 'LIKELY': 2, 'VERY_LIKELY': 1
+    };
+    
+    const safetyScore = Math.min(
+      safetyLevels[safeSearch?.adult] || 5,
+      safetyLevels[safeSearch?.violence] || 5,
+      safetyLevels[safeSearch?.racy] || 5
+    );
+
+    // Process objects
+    const objects = objectResult.localizedObjectAnnotations?.slice(0, 10).map(obj => ({
+      name: obj.name,
+      confidence: Math.round(obj.score * 100),
+      bounding_box: {
+        x1: obj.boundingPoly?.normalizedVertices?.[0]?.x || 0,
+        y1: obj.boundingPoly?.normalizedVertices?.[0]?.y || 0,
+        x2: obj.boundingPoly?.normalizedVertices?.[2]?.x || 1,
+        y2: obj.boundingPoly?.normalizedVertices?.[2]?.y || 1
+      }
+    })) || [];
+
+    // Process image properties
+    const colors = propertiesResult.imagePropertiesAnnotation?.dominantColors?.colors?.slice(0, 5).map(color => ({
+      red: color.color?.red || 0,
+      green: color.color?.green || 0,
+      blue: color.color?.blue || 0,
+      pixelFraction: color.pixelFraction || 0
+    })) || [];
+
+    // Calculate credibility score based on Vision API results
+    let credibilityScore = 50; // Base score
+
+    // Factor 1: Label relevance and confidence
+    const relevantLabels = labels.filter(label => 
+      ['vehicle', 'car', 'road', 'street', 'traffic', 'accident', 'construction', 'warning', 'sign', 'building', 'infrastructure']
+        .some(keyword => label.name.toLowerCase().includes(keyword))
+    );
+    
+    if (relevantLabels.length > 0) {
+      const avgLabelConfidence = relevantLabels.reduce((sum, label) => sum + label.confidence, 0) / relevantLabels.length;
+      credibilityScore += Math.min(avgLabelConfidence * 0.3, 25);
+    }
+
+    // Factor 2: Safety assessment
+    credibilityScore += safetyScore * 4; // Max 20 points
+
+    // Factor 3: Object detection quality
+    if (objects.length > 0) {
+      const avgObjectConfidence = objects.reduce((sum, obj) => sum + obj.confidence, 0) / objects.length;
+      credibilityScore += Math.min(avgObjectConfidence * 0.15, 10);
+    }
+
+    // Factor 4: Text content (road signs, etc.)
+    if (textAnnotations.length > 0) {
+      const hasRelevantText = textAnnotations.some(text => 
+        ['stop', 'caution', 'warning', 'road', 'street', 'avenue', 'highway', 'km', 'speed']
+          .some(keyword => text.description.toLowerCase().includes(keyword))
+      );
+      if (hasRelevantText) credibilityScore += 5;
+    }
+
+    // Factor 5: Image quality indicators
+    if (colors.length >= 3) credibilityScore += 5; // Good color variety indicates real photo
+
+    // Cap the score
+    credibilityScore = Math.min(Math.max(credibilityScore, 10), 95);
+
+    const processingTime = Date.now() - startTime;
+    
+    const analysis = {
+      analyzed: true,
+      credibility_score: Math.round(credibilityScore),
+      labels: labels.slice(0, 10), // Top 10 labels
+      text_annotations: textAnnotations,
+      safe_search: {
+        adult: safeSearch?.adult || 'UNKNOWN',
+        medical: safeSearch?.medical || 'UNKNOWN',
+        spoofed: safeSearch?.spoof || 'UNKNOWN',
+        violence: safeSearch?.violence || 'UNKNOWN',
+        racy: safeSearch?.racy || 'UNKNOWN',
+        overall_safety: safetyScore >= 4 ? 'SAFE' : 'MODERATE'
+      },
+      object_detection: objects,
+      image_properties: {
+        colors: colors,
+        brightness: Math.round(Math.random() * 100), // Simplified for demo
+        contrast: Math.round(Math.random() * 100)
+      },
+      analysis_timestamp: new Date(),
+      processing_time_ms: processingTime,
+      safetyViolations: safetyScore < 3 ? 1 : 0
+    };
+
+    console.log('✅ Vision API analysis completed:', {
+      credibilityScore: analysis.credibility_score,
+      labelsCount: labels.length,
+      objectsCount: objects.length,
+      processingTime: `${processingTime}ms`
+    });
+
+    return analysis;
+
+  } catch (error) {
+    console.error('❌ Google Vision API error:', error);
+    return {
+      analyzed: false,
+      credibility_score: 40, // Lower score for failed analysis
+      labels: [],
+      text_annotations: [],
+      safe_search: { overall_safety: 'UNKNOWN' },
+      object_detection: [],
+      image_properties: { colors: [] },
+      analysis_timestamp: new Date(),
+      processing_time_ms: Date.now() - startTime,
+      error: error.message
+    };
+  }
+};
+
+// Gemini AI credibility scoring
 const calculateAICredibilityScore = async (reportData) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
     Analyze this incident report and provide credibility score (0-100):
@@ -73,7 +227,7 @@ const calculateAICredibilityScore = async (reportData) => {
     
   } catch (error) {
     console.error('❌ Gemini AI error:', error);
-    return 50; // Fallback score
+    return 50;
   }
 };
 
@@ -117,7 +271,6 @@ export const contributeReport = async (req, res) => {
       });
     }
 
-    // Validate coordinates
     if (!parsedLocation.lat || !parsedLocation.lng) {
       return res.status(400).json({
         success: false,
@@ -126,8 +279,15 @@ export const contributeReport = async (req, res) => {
     }
 
     const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    let visionAnalysis = null;
 
-    // Get AI credibility score
+    // Analyze image with Google Vision API if photo is uploaded
+    if (req.file) {
+      const imagePath = path.join('./uploads', req.file.filename);
+      visionAnalysis = await analyzeImageWithVision(imagePath);
+    }
+
+    // Get Gemini AI credibility score
     const aiScore = await calculateAICredibilityScore({
       category,
       description,
@@ -137,12 +297,46 @@ export const contributeReport = async (req, res) => {
     });
 
     // Calculate final confidence score
-    let confidenceScore = Math.floor((aiScore * 0.7) + (50 * 0.3)); // 70% AI + 30% base
+    let confidenceScore = Math.floor((aiScore * 0.5) + (50 * 0.3)); // 50% AI + 30% base
+
+    // Add Vision API score if available
+    if (visionAnalysis && visionAnalysis.analyzed) {
+      confidenceScore = Math.floor(
+        (aiScore * 0.4) + 
+        (visionAnalysis.credibility_score * 0.4) + 
+        (50 * 0.2)
+      );
+    }
 
     // Enhancement factors
     if (photoUrl) confidenceScore = Math.min(confidenceScore + 10, 100);
     if (locationName && locationName.trim() !== '') confidenceScore = Math.min(confidenceScore + 5, 100);
     if (description && description.length > 50) confidenceScore = Math.min(confidenceScore + 5, 100);
+
+    // Create evidence array
+    const evidence = [
+      {
+        source: 'user_report',
+        score: confidenceScore,
+        details: 'Manual user submission with AI verification',
+        timestamp: new Date()
+      },
+      {
+        source: 'gemini_ai',
+        score: aiScore,
+        details: 'Gemini AI credibility analysis',
+        timestamp: new Date()
+      }
+    ];
+
+    if (visionAnalysis && visionAnalysis.analyzed) {
+      evidence.push({
+        source: 'google_vision',
+        score: visionAnalysis.credibility_score,
+        details: `Vision API analysis: ${visionAnalysis.labels.length} labels, ${visionAnalysis.object_detection.length} objects detected`,
+        timestamp: new Date()
+      });
+    }
 
     // Create new post
     const newPost = new Post({
@@ -151,27 +345,15 @@ export const contributeReport = async (req, res) => {
       description: description,
       location: {
         type: 'Point',
-        coordinates: [parsedLocation.lng, parsedLocation.lat] // [longitude, latitude]
+        coordinates: [parsedLocation.lng, parsedLocation.lat]
       },
       locationName: locationName || `${parsedLocation.lat.toFixed(4)}, ${parsedLocation.lng.toFixed(4)}`,
       severity: severity || 'Medium',
       photo_url: photoUrl,
       confidence_score: confidenceScore,
       status: confidenceScore >= 70 ? 'verified' : 'unverified',
-      evidence: [
-        {
-          source: 'user_report',
-          score: confidenceScore,
-          details: 'Manual user submission with AI verification',
-          timestamp: new Date()
-        },
-        {
-          source: 'gemini_ai',
-          score: aiScore,
-          details: 'Gemini AI credibility analysis',
-          timestamp: new Date()
-        }
-      ],
+      vision_analysis: visionAnalysis,
+      evidence: evidence,
       author: req.user.name,
       upvotes: 0,
       downvotes: 0,
@@ -182,27 +364,37 @@ export const contributeReport = async (req, res) => {
 
     const savedPost = await newPost.save();
 
-    // Update user statistics
-    await User.updateOne(
-      { userId: req.user.userId },
-      { 
-        $inc: { reports_submitted: 1 },
-        $set: { updatedAt: new Date() }
-      }
-    );
+    // Update user statistics and credibility
+    const user = await User.findOne({ userId: req.user.userId });
+    if (user) {
+      user.reports_submitted += 1;
+      await user.updateCredibilityScore(confidenceScore, visionAnalysis);
+    }
 
-    console.log(`✅ Report submitted by ${req.user.name}: ${category} - ${confidenceScore}% confidence (AI: ${aiScore}%)`);
+    console.log(`✅ Report submitted by ${req.user.name}: ${category} - ${confidenceScore}% confidence (AI: ${aiScore}%, Vision: ${visionAnalysis?.credibility_score || 'N/A'}%)`);
+
+    // Prepare response with detailed analysis
+    const responseData = {
+      postId: savedPost._id,
+      confidence_score: confidenceScore,
+      ai_score: aiScore,
+      vision_score: visionAnalysis?.credibility_score || null,
+      status: savedPost.status,
+      photo_url: photoUrl,
+      vision_analysis: visionAnalysis ? {
+        labels: visionAnalysis.labels.slice(0, 5),
+        objects_detected: visionAnalysis.object_detection.length,
+        text_detected: visionAnalysis.text_annotations.length > 0,
+        safety_rating: visionAnalysis.safe_search.overall_safety,
+        processing_time: visionAnalysis.processing_time_ms
+      } : null,
+      user_credibility_updated: user ? user.credibility_score : null
+    };
 
     res.status(201).json({
       success: true,
-      message: 'Report submitted successfully',
-      data: {
-        postId: savedPost._id,
-        confidence_score: confidenceScore,
-        ai_score: aiScore,
-        status: savedPost.status,
-        photo_url: photoUrl
-      }
+      message: 'Report submitted successfully with AI analysis',
+      data: responseData
     });
 
   } catch (error) {
