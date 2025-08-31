@@ -26,7 +26,7 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
   }, [])
 
   const fetchProfileData = async () => {
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       setError('Please login first')
       return
@@ -54,7 +54,7 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
   }
 
   const handleSignOut = () => {
-    localStorage.removeItem('auth_token')
+    localStorage.removeItem('access_token')
     localStorage.removeItem('user_id')
     localStorage.removeItem('user_name')
     onSignOut()

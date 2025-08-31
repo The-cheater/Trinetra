@@ -219,11 +219,11 @@ export const login = async (req, res) => {
     console.log(`✅ User found: ${emailLower}`);
 
     // Validate stored password exists and is a string
-    if (!user.password || typeof user.password !== 'string') {
+    if (!user.password || typeof user.password !== 'string' || user.password.trim() === '') {
       console.log(`❌ Invalid password hash stored for user: ${emailLower}`);
       return res.status(500).json({
         success: false,
-        message: 'Account authentication error. Please contact support.'
+        message: 'Account password corrupted. Please contact support or re-register.'
       });
     }
 

@@ -50,7 +50,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
     
     if (!newComment.trim()) return
 
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       alert('Please login to comment')
       return
@@ -87,7 +87,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
   }
 
   const handleDelete = async (commentId: string) => {
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) return
 
     try {

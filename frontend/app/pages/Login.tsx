@@ -73,7 +73,7 @@ const Login = ({ onLogin, onNavigateToSignup }: LoginProps) => {
 
       if (response.ok && data.success) {
         // Store JWT token and user info
-        localStorage.setItem('auth_token', data.data.token)
+        localStorage.setItem('access_token', data.data.accessToken)
         localStorage.setItem('user_id', data.data.user.userId)
         localStorage.setItem('user_name', data.data.user.name)
         

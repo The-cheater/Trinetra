@@ -33,7 +33,7 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
   }, [])
 
   const fetchCurrentProfile = async () => {
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       setError('Please login first')
       return
@@ -77,7 +77,7 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
     setIsLoading(true)
     setError('')
 
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       setError('Please login first')
       setIsLoading(false)

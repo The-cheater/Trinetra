@@ -73,7 +73,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
   }, [activeFilter, currentLocation, useCityFilter])
 
   const updateUserLocation = async (lat: number, lng: number) => {
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) return
 
     try {
@@ -108,7 +108,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
         url += `category=${activeFilter}&`
       }
 
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('access_token')
       const headers: any = {}
       if (token) {
         headers.Authorization = `Bearer ${token}`
@@ -145,7 +145,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
   const handleCommentSubmit = async (postId: string) => {
     if (!newComment.trim()) return
 
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('access_token')
     if (!token) {
       alert('Please login to comment')
       return
