@@ -705,14 +705,64 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ***
 
-## 📞 Support
-
-- 📧 **Email**: support@trinetra.com
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-- 📖 **Documentation**: [Wiki](https://github.com/your-repo/wiki)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
-
-***
-<div align="center">
-<img src="/Screenshot 2025-09-01 160330.png" alt="Trinetra Database Structure" width="800"/>
 </div>
+
+## 📸 Screenshots
+
+
+<div align="center">
+<img src="photos/Screenshot 2025-08-17 204348.png" alt="Dashboard View" width="800"/>
+<p><em>Dashboard - Main Interface</em></p>
+
+<img src="photos/Screenshot 2025-08-17 221547.png" alt="User Profile" width="800"/>
+<p><em>User Profile Management</em></p>
+</div>
+
+
+<div align="center">
+<img src="photos/Screenshot 2025-08-26 125811.png" alt="Data Management" width="800"/>
+<p><em>Database Structure and Organization</em></p>
+
+<img src="photos/Screenshot 2025-08-26 150615.png" alt="Analytics Dashboard" width="800"/>
+<p><em>Real-time Analytics Dashboard</em></p>
+</div>
+
+
+<div align="center">
+<img src="photos/Screenshot 2025-08-26 230520.png" alt="Security Settings" width="800"/>
+<p><em>Advanced Security Configuration</em></p>
+
+<img src="photos/Screenshot 2025-08-26 231004.png" alt="Authentication Flow" width="800"/>
+<p><em>User Authentication System</em></p>
+</div>
+
+
+<div align="center">
+<img src="photos/Screenshot 2025-08-26 233201.png" alt="System Architecture" width="800"/>
+<p><em>System Architecture Overview</em></p>
+
+<img src="photos/Screenshot 2025-09-01 160330.png" alt="Integration Flow" width="800"/>
+<p><em>Integration and Data Flow</em></p>
+</div>
+
+---
+
+## 💝 Thank You
+
+<div align="center">
+
+### Thank you for exploring TRINETRA!
+
+We appreciate your interest in our AI-powered urban safety platform. Your support helps us make communities safer and more connected.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=your-org/trinetra&type=Date)](https://star-history.com/#your-org/trinetra&Date)
+
+<br>
+
+**Made with ❤️ by the TRINETRA Team**
+
+[🌟 Star us on GitHub](https://github.com/your-org/trinetra) | [🐛 Report Bug](https://github.com/your-org/trinetra/issues) | [💡 Request Feature](https://github.com/your-org/trinetra/issues)
+
+</div>
+
+
