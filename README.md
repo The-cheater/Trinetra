@@ -714,5 +714,5 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ***
 <div align="center">
-<img src="public/screenshots/trinetra-database.png" alt="Trinetra Database Structure" width="800"/>
+<img src="/Screenshot 2025-09-01 160330.png" alt="Trinetra Database Structure" width="800"/>
 </div>
