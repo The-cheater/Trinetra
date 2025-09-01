@@ -1,0 +1,16 @@
+PORT=8080
+MONGODB_URI=mongodb://127.0.0.1:27017/TRINETRA
+JWT_SECRET=trinetra_super_secure_jwt_secret_key_2024_development_mode_only
+JWT_REFRESH_SECRET=trinetra_super_secure_refresh_secret_key_2024_development_mode_only
+SERPAPI_KEY=
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+NODE_ENV=development
+GEMINI_API_KEY=
+GOOGLE_VISION_API_KEY=
+GRAPHHOPPER_API_KEY=
+# File upload settings
+MAX_FILE_SIZE=5000000
+UPLOAD_PATH=./uploads
+# Google Vision API Configuration
+GOOGLE_APPLICATION_CREDENTIALS=
+GOOGLE_PROJECT_ID=
