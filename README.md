@@ -723,25 +723,25 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 <img src="photos/Screenshot 2025-08-26 125811.png" alt="Data Management" width="800"/>
 <p><em>Database Structure and Organization</em></p>
 
-<img src="photos/Screenshot 2025-08-26 150615.png" alt="Analytics Dashboard" width="800"/>
+<img src="photos/Screenshot 2025-08-26 150615.png" alt="Analytics Dashboard" width="300"/>
 <p><em>Real-time Analytics Dashboard</em></p>
 </div>
 
 
 <div align="center">
-<img src="photos/Screenshot 2025-08-26 230520.png" alt="Security Settings" width="800"/>
+<img src="photos/Screenshot 2025-08-26 230520.png" alt="Security Settings" width="300"/>
 <p><em>Advanced Security Configuration</em></p>
 
-<img src="photos/Screenshot 2025-08-26 231004.png" alt="Authentication Flow" width="800"/>
+<img src="photos/Screenshot 2025-08-26 231004.png" alt="Authentication Flow" width="300"/>
 <p><em>User Authentication System</em></p>
 </div>
 
 
 <div align="center">
-<img src="photos/Screenshot 2025-08-26 233201.png" alt="System Architecture" width="800"/>
+<img src="photos/Screenshot 2025-08-26 233201.png" alt="System Architecture" width="300"/>
 <p><em>System Architecture Overview</em></p>
 
-<img src="photos/Screenshot 2025-09-01 160330.png" alt="Integration Flow" width="800"/>
+<img src="photos/Screenshot 2025-09-01 160330.png" alt="Integration Flow" width="300"/>
 <p><em>Integration and Data Flow</em></p>
 </div>
 
