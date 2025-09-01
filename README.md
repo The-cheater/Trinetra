@@ -341,9 +341,7 @@ A **enterprise-grade** RESTful API server built with Node.js and Express, featur
 </td>
 <td width="50%">
 
-<div align="center">
-<img src="public/screenshots/trinetra-database.png" alt="Trinetra Database Structure" width="800"/>
-</div>
+
 
 **🚀 Performance & Scalability**
 - Redis caching & session storage
@@ -715,3 +713,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
 
 ***
+<div align="center">
+<img src="public/screenshots/trinetra-database.png" alt="Trinetra Database Structure" width="800"/>
+</div>
