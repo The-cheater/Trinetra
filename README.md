@@ -1,4 +1,3 @@
-
 <div align="center">
 
 # 🏙️ TRINETRA
@@ -94,6 +93,8 @@
 
 A **mobile-first**, responsive web application built with Next.js 14 (App Router) providing an intuitive interface for community safety engagement. Features smooth animations, real-time updates, and comprehensive theme support.
 
+
+
 <div align="center">
 <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=18&duration=2000&pause=500&color=61DAFB&center=true&vCenter=true&width=500&lines=Mobile-First+Design;Real-Time+Updates;Smooth+Animations;Theme+Support" alt="Frontend Features" />
 </div>
@@ -121,6 +122,7 @@ Secure signup/login with JWT integration and session management
 
 </td>
 <td width="33%" align="center">
+
 
 **📱 Urban Thread Feed**
 
@@ -338,6 +340,10 @@ A **enterprise-grade** RESTful API server built with Node.js and Express, featur
 
 </td>
 <td width="50%">
+
+<div align="center">
+<img src="public/screenshots/trinetra-database.png" alt="Trinetra Database Structure" width="800"/>
+</div>
 
 **🚀 Performance & Scalability**
 - Redis caching & session storage
