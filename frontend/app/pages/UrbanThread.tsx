@@ -77,7 +77,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     if (!token) return
 
     try {
-      await fetch('/api/location/update', {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/location/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -95,17 +95,17 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     setError('')
 
     try {
-      let url = '/api/threads?'
+      let queryParams = ''
 
       if (currentLocation) {
-        url += `lat=${currentLocation.lat}&lng=${currentLocation.lng}&`
+        queryParams += `lat=${currentLocation.lat}&lng=${currentLocation.lng}&`
         if (useCityFilter) {
-          url += 'user_city_only=true&'
+          queryParams += 'user_city_only=true&'
         }
       }
 
       if (activeFilter !== 'All') {
-        url += `category=${activeFilter}&`
+        queryParams += `category=${activeFilter}&`
       }
 
       const token = localStorage.getItem('access_token')
@@ -114,6 +114,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
         headers.Authorization = `Bearer ${token}`
       }
 
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/threads?${queryParams}`
       const response = await fetch(url, { headers })
       const data = await response.json()
 
