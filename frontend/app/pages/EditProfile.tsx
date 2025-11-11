@@ -40,9 +40,10 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/profile/me', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
       })
 
@@ -85,11 +86,12 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/profile/me', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           name: formData.name

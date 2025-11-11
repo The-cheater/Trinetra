@@ -500,7 +500,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
                       border: `1px solid ${isDark ? '#333' : '#eee'}`
                     }}>
                       <img
-                        src={`http://localhost:8080${incident.photo_url}`}
+                        src={`${process.env.NEXT_PUBLIC_API_URL}${incident.photo_url}`}
                         alt="Incident evidence"
                         style={{
                           width: '100%',
@@ -508,7 +508,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
                           objectFit: 'cover',
                           cursor: 'pointer'
                         }}
-                        onClick={() => window.open(`http://localhost:8080${incident.photo_url}`, '_blank')}
+                        onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}${incident.photo_url}`, '_blank')}
                       />
                       <div style={{
                         display: 'flex',

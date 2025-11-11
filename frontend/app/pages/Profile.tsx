@@ -33,9 +33,10 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/profile/me', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
       })
 
