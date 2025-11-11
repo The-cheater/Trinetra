@@ -43,7 +43,7 @@ const limiter = rateLimit({
   max: process.env.NODE_ENV === 'development' ? 1000 : 100, // Much higher for dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders: false
 });
 app.use('/api/', limiter);
 
@@ -58,7 +58,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting in development for easier testing
-  skip: (req) => process.env.NODE_ENV === 'development'
+  skip: (_req) => process.env.NODE_ENV === 'development'
 });
 
 // Stricter rate limiting for contribute endpoint
@@ -124,7 +124,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error(err.stack);
   res.status(500).json({
     success: false,
@@ -146,8 +146,8 @@ const PORT = process.env.PORT || 8080;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🗄️ Database: TRINETRA`);
-  console.log(`🔍 AI Engine: SerpAPI Multi-Source Verification`);
+  console.log('🗄️ Database: TRINETRA');
+  console.log('🔍 AI Engine: SerpAPI Multi-Source Verification');
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
   console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
   console.log(`📝 Contribute endpoint: http://localhost:${PORT}/api/contribute`);

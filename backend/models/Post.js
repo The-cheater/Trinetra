@@ -28,7 +28,7 @@ const postSchema = new mongoose.Schema({
       type: [Number],
       required: true,
       validate: {
-        validator: function(coords) {
+        validator: function (coords) {
           return coords.length === 2 &&
             coords[0] >= -180 && coords[0] <= 180 &&
             coords[1] >= -90 && coords[1] <= 90;
@@ -50,7 +50,7 @@ const postSchema = new mongoose.Schema({
   photo_url: {
     type: String,
     validate: {
-      validator: function(url) {
+      validator: function (url) {
         return !url || /^\/uploads\//.test(url);
       },
       message: 'Invalid photo URL format'
@@ -73,10 +73,10 @@ const postSchema = new mongoose.Schema({
   vision_analysis: {
     analyzed: { type: Boolean, default: false },
     credibility_score: { type: Number, min: 0, max: 100 },
-    labels: [{ 
-      name: String, 
+    labels: [{
+      name: String,
       confidence: Number,
-      topicality: Number 
+      topicality: Number
     }],
     text_annotations: [{
       description: String,
@@ -169,21 +169,21 @@ postSchema.index({ 'vision_analysis.credibility_score': -1 });
 // Transform output
 postSchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     ret.id = ret._id;
     delete ret._id;
-    
+
     if (ret.location && ret.location.coordinates) {
       ret.coordinates = {
         lat: ret.location.coordinates[1],
         lng: ret.location.coordinates[0]
       };
     }
-    
+
     if (ret.createdAt) {
       ret.created_at = ret.createdAt;
     }
-    
+
     return ret;
   }
 });

@@ -1,6 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Set up storage engine for multer
 const storage = multer.diskStorage({
@@ -36,7 +40,7 @@ const getFile = (req, res) => {
   });
 };
 
-module.exports = {
+export {
   uploadFile,
   getFile
 };

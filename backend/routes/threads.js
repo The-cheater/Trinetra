@@ -2,12 +2,12 @@ import express from 'express';
 import { body } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
 import { handleValidationErrors } from '../middleware/validation.js';
-import { 
-  getThreads, 
-  getThread, 
-  getThreadComments, 
+import {
+  getThreads,
+  getThread,
+  getThreadComments,
   addComment,
-  getCityStats  // Add this
+  getCityStats // Add this
 } from '../controllers/threadsController.js';
 
 const router = express.Router();

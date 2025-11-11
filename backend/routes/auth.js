@@ -1,12 +1,12 @@
 import express from 'express';
-import { 
-  login, 
-  register, 
-  refreshToken, 
+import {
+  login,
+  register,
+  refreshToken,
   verifyToken,
-  getProfile, 
-  logout, 
-  logoutAll 
+  getProfile,
+  logout,
+  logoutAll
 } from '../controllers/authController.js';
 import { authenticateToken } from '../middleware/auth.js';
 

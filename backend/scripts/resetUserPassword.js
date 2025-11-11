@@ -21,7 +21,7 @@ const resetUserPassword = async () => {
     // Update user password
     const result = await User.updateOne(
       { email: email.toLowerCase() },
-      { 
+      {
         password: hashedPassword,
         updatedAt: new Date()
       }

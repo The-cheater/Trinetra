@@ -9,7 +9,7 @@ const refreshTokens = new Set();
 // Generate Access Token (short-lived - 15 minutes)
 const generateAccessToken = (user) => {
   return jwt.sign(
-    { 
+    {
       userId: user.userId,
       email: user.email,
       name: user.name
@@ -22,7 +22,7 @@ const generateAccessToken = (user) => {
 // Generate Refresh Token (long-lived - 7 days)
 const generateRefreshToken = (userId) => {
   const refreshToken = jwt.sign(
-    { 
+    {
       userId: userId,
       tokenId: uuidv4(),
       type: 'refresh'
@@ -159,7 +159,7 @@ export const register = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Registration error:', error);
-    
+
     // Handle duplicate key error (in case of race condition)
     if (error.code === 11000) {
       return res.status(409).json({
@@ -181,9 +181,9 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('🔍 Login request received:', { 
-      email: email || 'MISSING', 
-      password: password ? 'PROVIDED' : 'MISSING' 
+    console.log('🔍 Login request received:', {
+      email: email || 'MISSING',
+      password: password ? 'PROVIDED' : 'MISSING'
     });
 
     // Validate required fields
@@ -207,7 +207,7 @@ export const login = async (req, res) => {
 
     // Find user in database
     const user = await User.findOne({ email: emailLower });
-    
+
     if (!user) {
       console.log(`❌ User not found: ${emailLower}`);
       return res.status(401).json({
@@ -239,13 +239,13 @@ export const login = async (req, res) => {
         // Password is plaintext - direct comparison (legacy support)
         console.log('⚠️ Using plaintext comparison - upgrading to hash');
         isPasswordValid = (user.password === password);
-        
+
         // If password is correct, upgrade to hash for future logins
         if (isPasswordValid) {
           const hashedPassword = await bcrypt.hash(password, 12);
           await User.updateOne(
             { userId: user.userId },
-            { 
+            {
               password: hashedPassword,
               updatedAt: new Date()
             }
@@ -260,7 +260,7 @@ export const login = async (req, res) => {
         message: 'Authentication error. Please try again.'
       });
     }
-    
+
     if (!isPasswordValid) {
       console.log(`❌ Invalid password for: ${emailLower}`);
       return res.status(401).json({
@@ -293,7 +293,7 @@ export const login = async (req, res) => {
     // Update last active timestamp
     await User.updateOne(
       { userId: user.userId },
-      { 
+      {
         last_active: new Date(),
         updatedAt: new Date()
       }
@@ -327,11 +327,11 @@ export const login = async (req, res) => {
       stack: error.stack,
       email: req.body?.email || 'UNKNOWN'
     });
-    
+
     res.status(500).json({
       success: false,
       message: 'Login failed. Please try again.',
-      ...(process.env.NODE_ENV === 'development' && { 
+      ...(process.env.NODE_ENV === 'development' && {
         error: error.message,
         location: 'authController.js:login'
       })
@@ -362,7 +362,7 @@ export const refreshToken = async (req, res) => {
 
     try {
       const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      
+
       if (!decoded.userId || decoded.type !== 'refresh') {
         return res.status(401).json({
           success: false,
@@ -381,7 +381,7 @@ export const refreshToken = async (req, res) => {
 
       // Generate new tokens
       const newAccessToken = generateAccessToken(user);
-      
+
       // Rotate refresh token for security
       refreshTokens.delete(refreshToken);
       const newRefreshToken = generateRefreshToken(user.userId);
@@ -474,7 +474,7 @@ export const verifyToken = async (req, res) => {
         }
       });
 
-    } catch (jwtError) {
+    } catch (_jwtError) {
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired access token'
@@ -494,7 +494,7 @@ export const verifyToken = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findOne({ userId: req.user.userId }).select('-password');
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -541,7 +541,7 @@ export const getProfile = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const { refreshToken } = req.cookies;
-    
+
     // Remove refresh token from memory store
     if (refreshToken && refreshTokens.has(refreshToken)) {
       refreshTokens.delete(refreshToken);
@@ -559,7 +559,7 @@ export const logout = async (req, res) => {
     if (req.user?.userId) {
       await User.updateOne(
         { userId: req.user.userId },
-        { 
+        {
           last_active: new Date(),
           updatedAt: new Date()
         }
@@ -586,7 +586,7 @@ export const logout = async (req, res) => {
 export const logoutAll = async (req, res) => {
   try {
     const userId = req.user?.userId;
-    
+
     if (userId) {
       // Remove all refresh tokens for this user (in production, store tokens by userId)
       const tokensToDelete = [];
@@ -596,18 +596,18 @@ export const logoutAll = async (req, res) => {
           if (decoded.userId === userId) {
             tokensToDelete.push(token);
           }
-        } catch (error) {
+        } catch (_error) {
           // Invalid token, remove it anyway
           tokensToDelete.push(token);
         }
       }
-      
+
       tokensToDelete.forEach(token => refreshTokens.delete(token));
-      
+
       // Update user's last active time
       await User.updateOne(
         { userId },
-        { 
+        {
           last_active: new Date(),
           updatedAt: new Date()
         }
@@ -621,7 +621,7 @@ export const logoutAll = async (req, res) => {
       sameSite: 'strict'
     });
 
-    console.log(`✅ User logged out from all devices`);
+    console.log('✅ User logged out from all devices');
 
     res.json({
       success: true,

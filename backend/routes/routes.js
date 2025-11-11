@@ -1,11 +1,11 @@
 import express from 'express';
 import { body, query } from 'express-validator';
 import { handleValidationErrors } from '../middleware/validation.js';
-import { 
-  getRoutes, 
-  getRouteWithIncidents, 
+import {
+  getRoutes,
+  getRouteWithIncidents,
   getNearbyPlaces,
-  getRouteComparison 
+  getRouteComparison
 } from '../controllers/routesController.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 
@@ -60,33 +60,33 @@ const placesValidation = [
 ];
 
 // Get all route options (fastest, eco, safest)
-router.post('/', 
+router.post('/',
   optionalAuth, // Optional authentication for better results
-  routeValidation, 
-  handleValidationErrors, 
+  routeValidation,
+  handleValidationErrors,
   getRoutes
 );
 
 // Get route comparison with analysis
-router.post('/compare', 
+router.post('/compare',
   optionalAuth,
-  routeValidation, 
-  handleValidationErrors, 
+  routeValidation,
+  handleValidationErrors,
   getRouteComparison
 );
 
 // Get route with nearby incidents (requires auth for personalized results)
-router.post('/with-incidents', 
+router.post('/with-incidents',
   authenticateToken, // Requires authentication
-  routeValidation, 
-  handleValidationErrors, 
+  routeValidation,
+  handleValidationErrors,
   getRouteWithIncidents
 );
 
 // Get nearby places (works with SerpAPI)
-router.get('/nearby', 
-  placesValidation, 
-  handleValidationErrors, 
+router.get('/nearby',
+  placesValidation,
+  handleValidationErrors,
   getNearbyPlaces
 );
 

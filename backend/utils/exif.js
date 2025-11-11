@@ -14,7 +14,7 @@ export const extractBasicEXIF = async (photoPath) => {
     return {
       hasEXIF: true,
       timestamp: result.tags?.DateTime || null,
-      gps: result.tags?.GPSLatitude && result.tags?.GPSLongitude 
+      gps: result.tags?.GPSLatitude && result.tags?.GPSLongitude
         ? { lat: result.tags.GPSLatitude, lng: result.tags.GPSLongitude }
         : null,
       device: result.tags?.Make || 'Unknown'

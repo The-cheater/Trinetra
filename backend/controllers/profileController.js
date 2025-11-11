@@ -5,7 +5,7 @@ import Post from '../models/Post.js';
 export const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     // Get user data
     const user = await User.findOne({ userId }).select('-password');
     if (!user) {
@@ -70,8 +70,8 @@ export const getUserProfile = async (req, res) => {
           postsByStatus: postStats,
           postsByCategory: categoryStats,
           totalContributions: user.reports_submitted,
-          successRate: user.reports_submitted > 0 
-            ? Math.round((user.reports_verified / user.reports_submitted) * 100) 
+          successRate: user.reports_submitted > 0
+            ? Math.round((user.reports_verified / user.reports_submitted) * 100)
             : 0
         }
       }
@@ -91,7 +91,7 @@ export const getUserProfile = async (req, res) => {
 export const getMyProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
+
     // Reuse the getUserProfile logic but with authenticated user
     req.params = { userId };
     return getUserProfile(req, res);
@@ -152,22 +152,22 @@ export const updateProfile = async (req, res) => {
 // Get user's submission history with filters
 export const getUserHistory = async (req, res) => {
   try {
-    const { 
-      status = 'all', 
+    const {
+      status = 'all',
       category = 'all',
-      page = 1, 
-      limit = 20 
+      page = 1,
+      limit = 20
     } = req.query;
-    
+
     const userId = req.user._id;
-    
+
     // Build query
-    let query = { userId };
-    
+    const query = { userId };
+
     if (status !== 'all') {
       query.status = status;
     }
-    
+
     if (category !== 'all') {
       query.category = category;
     }
@@ -212,7 +212,7 @@ export const getUserHistory = async (req, res) => {
 const calculateReputationLevel = (avgCredibility, verifiedReports) => {
   const score = avgCredibility || 0;
   const reports = verifiedReports || 0;
-  
+
   if (score >= 85 && reports >= 20) return { level: 'Expert', badge: '🏆' };
   if (score >= 75 && reports >= 10) return { level: 'Trusted', badge: '⭐' };
   if (score >= 65 && reports >= 5) return { level: 'Contributor', badge: '📝' };
@@ -224,10 +224,10 @@ const calculateReputationLevel = (avgCredibility, verifiedReports) => {
 export const getLeaderboard = async (req, res) => {
   try {
     const { period = 'all', limit = 10 } = req.query;
-    
+
     // Base match query
-    let matchQuery = {};
-    
+    const matchQuery = {};
+
     // Filter by time period
     if (period === 'month') {
       const lastMonth = new Date();

@@ -12,7 +12,7 @@ const locationValidation = [
   body('lng').isFloat({ min: -180, max: 180 }).withMessage('Valid longitude required')
 ];
 
-router.put('/update', 
+router.put('/update',
   authenticateToken,
   locationValidation,
   handleValidationErrors,

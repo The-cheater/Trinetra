@@ -40,7 +40,7 @@ const fileFilter = (req, file, cb) => {
 export const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: fileFilter
 });
@@ -48,10 +48,10 @@ export const upload = multer({
 // Google Vision API Analysis
 const analyzeImageWithVision = async (imagePath) => {
   const startTime = Date.now();
-  
+
   try {
     console.log('🔍 Starting Google Vision API analysis for:', imagePath);
-    
+
     // Run multiple detection features
     const [labelResult] = await visionClient.labelDetection(imagePath);
     const [textResult] = await visionClient.textDetection(imagePath);
@@ -77,7 +77,7 @@ const analyzeImageWithVision = async (imagePath) => {
     const safetyLevels = {
       'VERY_UNLIKELY': 5, 'UNLIKELY': 4, 'POSSIBLE': 3, 'LIKELY': 2, 'VERY_LIKELY': 1
     };
-    
+
     const safetyScore = Math.min(
       safetyLevels[safeSearch?.adult] || 5,
       safetyLevels[safeSearch?.violence] || 5,
@@ -108,11 +108,11 @@ const analyzeImageWithVision = async (imagePath) => {
     let credibilityScore = 50; // Base score
 
     // Factor 1: Label relevance and confidence
-    const relevantLabels = labels.filter(label => 
+    const relevantLabels = labels.filter(label =>
       ['vehicle', 'car', 'road', 'street', 'traffic', 'accident', 'construction', 'warning', 'sign', 'building', 'infrastructure']
         .some(keyword => label.name.toLowerCase().includes(keyword))
     );
-    
+
     if (relevantLabels.length > 0) {
       const avgLabelConfidence = relevantLabels.reduce((sum, label) => sum + label.confidence, 0) / relevantLabels.length;
       credibilityScore += Math.min(avgLabelConfidence * 0.3, 25);
@@ -129,7 +129,7 @@ const analyzeImageWithVision = async (imagePath) => {
 
     // Factor 4: Text content (road signs, etc.)
     if (textAnnotations.length > 0) {
-      const hasRelevantText = textAnnotations.some(text => 
+      const hasRelevantText = textAnnotations.some(text =>
         ['stop', 'caution', 'warning', 'road', 'street', 'avenue', 'highway', 'km', 'speed']
           .some(keyword => text.description.toLowerCase().includes(keyword))
       );
@@ -143,7 +143,7 @@ const analyzeImageWithVision = async (imagePath) => {
     credibilityScore = Math.min(Math.max(credibilityScore, 10), 95);
 
     const processingTime = Date.now() - startTime;
-    
+
     const analysis = {
       analyzed: true,
       credibility_score: Math.round(credibilityScore),
@@ -197,7 +197,7 @@ const analyzeImageWithVision = async (imagePath) => {
 // Gemini AI credibility scoring
 const calculateAICredibilityScore = async (reportData) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
     Analyze this incident report and provide credibility score (0-100):
@@ -221,10 +221,10 @@ const calculateAICredibilityScore = async (reportData) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const scoreText = response.text().trim();
-    
+
     const score = parseInt(scoreText);
     return isNaN(score) ? 50 : Math.min(Math.max(score, 0), 100);
-    
+
   } catch (error) {
     console.error('❌ Gemini AI error:', error);
     return 50;
@@ -264,7 +264,7 @@ export const contributeReport = async (req, res) => {
     let parsedLocation;
     try {
       parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
-    } catch (error) {
+    } catch (_error) {
       return res.status(400).json({
         success: false,
         message: 'Invalid location format'
@@ -302,8 +302,8 @@ export const contributeReport = async (req, res) => {
     // Add Vision API score if available
     if (visionAnalysis && visionAnalysis.analyzed) {
       confidenceScore = Math.floor(
-        (aiScore * 0.4) + 
-        (visionAnalysis.credibility_score * 0.4) + 
+        (aiScore * 0.4) +
+        (visionAnalysis.credibility_score * 0.4) +
         (50 * 0.2)
       );
     }

@@ -725,9 +725,6 @@ const Map = ({ onNavigate }: MapProps) => {
               ]}
               zoom={8}
               style={{ height: '100%', width: '100%' }}
-              whenCreated={(mapInstance) => {
-                mapRef.current = mapInstance
-              }}
             >
               {/* Traffic-oriented tile layer instead of satellite */}
               <TileLayer

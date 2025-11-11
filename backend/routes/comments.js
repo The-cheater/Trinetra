@@ -12,7 +12,7 @@ const commentValidation = [
     .withMessage('Comment must be between 1-500 characters')
 ];
 
-router.post('/', 
+router.post('/',
   authenticateToken,
   commentValidation,
   handleValidationErrors,

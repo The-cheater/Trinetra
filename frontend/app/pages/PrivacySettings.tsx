@@ -395,7 +395,7 @@ const PrivacySettings = ({ onNavigate }: PrivacySettingsProps) => {
         </motion.div>
       )}
 
-      <BottomNavigation activeTab="profile" onNavigate={onNavigate} />
+      <BottomNavigation current="profile" onNavigate={onNavigate} />
     </div>
   )
 }

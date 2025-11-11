@@ -90,8 +90,8 @@ const getNearbyIncidents = async (origin, destination) => {
 const validateLocation = async (location) => {
   try {
     const response = await getJson({
-      engine: "google_maps",
-      q: "landmark",
+      engine: 'google_maps',
+      q: 'landmark',
       ll: `@${location.lat},${location.lng},14z`,
       api_key: process.env.SERPAPI_KEY
     });
@@ -165,7 +165,7 @@ const calculateEcoRoute = async (origin, destination, incidents = []) => {
     const baseTime = Math.round(ecoDistance * 1.4); // Slower speed for fuel efficiency
 
     // Eco routes avoid highways, so fewer high-speed incidents
-    const relevantIncidents = incidents.filter(i => 
+    const relevantIncidents = incidents.filter(i =>
       i.category !== 'Traffic' || i.severity !== 'High'
     );
 
@@ -258,10 +258,10 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
   return distance;
 };
@@ -269,7 +269,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // Find nearby places using SerpAPI
 export const getNearbyPlaces = async (req, res) => {
   try {
-    const { lat, lng, query = "restaurants", type = "search" } = req.query;
+    const { lat, lng, query = 'restaurants', type = 'search' } = req.query;
 
     if (!lat || !lng) {
       return res.status(400).json({
@@ -279,7 +279,7 @@ export const getNearbyPlaces = async (req, res) => {
     }
 
     const response = await getJson({
-      engine: "google_maps",
+      engine: 'google_maps',
       type: type,
       q: query,
       ll: `@${lat},${lng},14z`,

@@ -5,10 +5,9 @@ import Image from 'next/image'
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
-  showText?: boolean
 }
 
-const Logo = ({ size = 'medium', showText = true }: LogoProps) => {
+const Logo = ({ size = 'medium' }: LogoProps) => {
   const sizes = {
     small: { width: 150, height: 36 },
     medium: { width: 170, height: 46 },

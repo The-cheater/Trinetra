@@ -2,8 +2,8 @@ import express from 'express';
 import { body, query } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
 import { handleValidationErrors } from '../middleware/validation.js';
-import { 
-  getUserProfile, 
+import {
+  getUserProfile,
   getMyProfile,
   updateProfile,
   getUserHistory,
@@ -24,7 +24,7 @@ const updateValidation = [
     .withMessage('Name must be between 2-50 characters')
 ];
 
-router.put('/me', 
+router.put('/me',
   authenticateToken,
   updateValidation,
   handleValidationErrors,

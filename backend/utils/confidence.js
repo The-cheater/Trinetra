@@ -10,8 +10,8 @@ export const calculateConfidence = async ({
 }) => {
   try {
     let totalScore = 20; // Base score
-    let evidence = [];
-    let reasoning = [];
+    const evidence = [];
+    const reasoning = [];
 
     // 1. Real-time News Verification (30 points)
     const newsScore = await verifyWithGoogleNews(description, category, locationName);
@@ -32,8 +32,9 @@ export const calculateConfidence = async ({
     reasoning.push(locationScore.reason);
 
     // 4. Image Authenticity Check (15 points) - if photo provided
+    let imageScore = { score: 0, evidence: {}, reason: '' };
     if (photoPath) {
-      const imageScore = await verifyImageAuthenticity(photoPath, description);
+      imageScore = await verifyImageAuthenticity(photoPath, description);
       totalScore += imageScore.score;
       evidence.push(imageScore.evidence);
       reasoning.push(imageScore.reason);
@@ -82,13 +83,13 @@ const verifyWithGoogleNews = async (description, category, locationName) => {
   try {
     // Search for recent news about the incident
     const searchQuery = `${category.toLowerCase()} ${locationName} ${extractKeywords(description)}`;
-    
+
     const response = await getJson({
-      engine: "google_news",
+      engine: 'google_news',
       q: searchQuery,
       api_key: process.env.SERPAPI_KEY,
-      gl: "in", // India
-      hl: "en"
+      gl: 'in', // India
+      hl: 'en'
     });
 
     let score = 0;
@@ -97,7 +98,7 @@ const verifyWithGoogleNews = async (description, category, locationName) => {
 
     if (response.news_results && response.news_results.length > 0) {
       newsCount = response.news_results.length;
-      
+
       // Check for recent news (within 24 hours)
       const recentArticles = response.news_results.filter(article => {
         const timeAgo = article.date || '';
@@ -114,10 +115,10 @@ const verifyWithGoogleNews = async (description, category, locationName) => {
       }
 
       // Boost for high-quality sources
-      const qualitySources = response.news_results.filter(article => 
+      const qualitySources = response.news_results.filter(article =>
         article.source && (
-          article.source.includes('Times') || 
-          article.source.includes('Hindu') || 
+          article.source.includes('Times') ||
+          article.source.includes('Hindu') ||
           article.source.includes('Express') ||
           article.source.includes('TOI')
         )
@@ -154,13 +155,13 @@ const verifyWithGoogleNews = async (description, category, locationName) => {
 const validateWithGoogleSearch = async (description, locationName, category) => {
   try {
     const searchQuery = `"${locationName}" ${category.toLowerCase()} incident report today`;
-    
+
     const response = await getJson({
-      engine: "google",
+      engine: 'google',
       q: searchQuery,
       api_key: process.env.SERPAPI_KEY,
-      gl: "in",
-      hl: "en",
+      gl: 'in',
+      hl: 'en',
       num: 10
     });
 
@@ -186,7 +187,7 @@ const validateWithGoogleSearch = async (description, locationName, category) => 
       // Check for official sources (traffic police, municipal corp, etc.)
       const officialResults = response.organic_results.filter(result =>
         result.link && (
-          result.link.includes('gov.') || 
+          result.link.includes('gov.') ||
           result.link.includes('police') ||
           result.link.includes('municipal') ||
           result.link.includes('traffic')
@@ -224,20 +225,20 @@ const validateWithGoogleSearch = async (description, locationName, category) => 
 const verifyLocationContext = async (coordinates, locationName) => {
   try {
     const [lng, lat] = coordinates;
-    
+
     const response = await getJson({
-      engine: "google_maps",
-      type: "search",
+      engine: 'google_maps',
+      type: 'search',
       q: locationName,
       ll: `@${lat},${lng},14z`,
       api_key: process.env.SERPAPI_KEY
     });
 
     let score = 5; // Base score for valid coordinates
-    
+
     if (response.local_results && response.local_results.length > 0) {
       score += 5; // Location exists on Google Maps
-      
+
       // Check if it's a known area/landmark
       const hasRatings = response.local_results.some(place => place.rating);
       if (hasRatings) {
@@ -247,7 +248,7 @@ const verifyLocationContext = async (coordinates, locationName) => {
       // Check for road/traffic related places nearby
       const trafficRelated = response.local_results.some(place => {
         const title = (place.title || '').toLowerCase();
-        return title.includes('road') || title.includes('highway') || 
+        return title.includes('road') || title.includes('highway') ||
                title.includes('junction') || title.includes('signal');
       });
 
@@ -278,23 +279,23 @@ const verifyLocationContext = async (coordinates, locationName) => {
 };
 
 // 4. Image authenticity check with Google Images reverse search
-const verifyImageAuthenticity = async (photoPath, description) => {
+const verifyImageAuthenticity = async (photoPath, _description) => {
   try {
     // For now, basic file validation
     // TODO: Implement reverse image search when SerpAPI supports image uploads
     const fs = await import('fs');
-    
+
     if (!fs.existsSync(photoPath)) {
       return { score: 0, reason: 'Image not accessible', evidence: {} };
     }
 
     // Basic image validation
     let score = 8; // Base score for having an image
-    
+
     // Check file size (very large or very small might be suspicious)
     const stats = fs.statSync(photoPath);
     const fileSizeKB = stats.size / 1024;
-    
+
     if (fileSizeKB > 100 && fileSizeKB < 5000) { // 100KB to 5MB seems reasonable
       score += 4;
     } else {
@@ -329,23 +330,23 @@ const checkTrendingEvents = async (category, locationName) => {
   try {
     // Search for trending topics related to the incident
     const searchQuery = `${category.toLowerCase()} ${locationName} trending today`;
-    
+
     const response = await getJson({
-      engine: "google",
+      engine: 'google',
       q: searchQuery,
       api_key: process.env.SERPAPI_KEY,
-      gl: "in",
-      hl: "en",
+      gl: 'in',
+      hl: 'en',
       num: 5
     });
 
     let score = 2; // Base score
-    
+
     if (response.organic_results && response.organic_results.length > 0) {
       // Look for recent/trending indicators
       const trendingResults = response.organic_results.filter(result => {
         const content = (result.title + ' ' + result.snippet).toLowerCase();
-        return content.includes('today') || content.includes('now') || 
+        return content.includes('today') || content.includes('now') ||
                content.includes('breaking') || content.includes('latest');
       });
 
@@ -383,12 +384,12 @@ const extractKeywords = (description) => {
     .split(' ')
     .filter(word => word.length > 3)
     .slice(0, 5); // Top 5 meaningful words
-  
+
   return words.join(' ');
 };
 
 // User reputation bonus (placeholder)
-const getUserReputationBonus = async (userId) => {
+const getUserReputationBonus = async (_userId) => {
   return {
     score: 3,
     reason: 'User reputation applied',

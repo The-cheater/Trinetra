@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, CheckCircle } from 'lucide-react'
+import { X, CheckCircle } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 
 interface PopoverFormProps {
@@ -28,7 +28,7 @@ export const PopoverForm = ({
   showSuccess = false,
   openChild,
   successChild,
-  onSubmit
+  onSubmit: _onSubmit
 }: PopoverFormProps) => {
   const { isDark } = useTheme()
 

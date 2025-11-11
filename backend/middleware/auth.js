@@ -32,14 +32,14 @@ export const authenticateToken = async (req, res, next) => {
 
   } catch (error) {
     console.error('Authentication error:', error.message);
-    
+
     if (error.name === 'JsonWebTokenError') {
       return res.status(403).json({
         success: false,
         message: 'Invalid token'
       });
     }
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(403).json({
         success: false,
@@ -67,9 +67,9 @@ export const optionalAuth = async (req, res, next) => {
         req.user = user;
       }
     }
-    
+
     next();
-  } catch (error) {
+  } catch (_error) {
     // Don't fail, just continue without user
     next();
   }

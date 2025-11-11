@@ -19,7 +19,7 @@ export const updateUserLocation = async (req, res) => {
     const locationInfo = await reverseGeocode(lat, lng);
 
     // Update user location
-    const updatedUser = await User.findByIdAndUpdate(
+    const _updatedUser = await User.findByIdAndUpdate(
       userId,
       {
         location: {
@@ -72,9 +72,9 @@ export const getNearbyAreas = async (req, res) => {
 
     // Get nearby places using SerpAPI
     const response = await getJson({
-      engine: "google_maps",
-      type: "search",
-      q: "areas landmarks",
+      engine: 'google_maps',
+      type: 'search',
+      q: 'areas landmarks',
       ll: `@${lat},${lng},12z`,
       api_key: process.env.SERPAPI_KEY
     });
@@ -110,9 +110,9 @@ const reverseGeocode = async (lat, lng) => {
   try {
     // Use SerpAPI to get location details
     const response = await getJson({
-      engine: "google_maps",
-      type: "search",
-      q: "current location",
+      engine: 'google_maps',
+      type: 'search',
+      q: 'current location',
       ll: `@${lat},${lng},14z`,
       api_key: process.env.SERPAPI_KEY
     });
@@ -120,13 +120,13 @@ const reverseGeocode = async (lat, lng) => {
     // Extract city information from results
     let city = 'Unknown';
     let state = 'Unknown';
-    let country = 'India';
+    const country = 'India';
     let formatted_address = `${lat}, ${lng}`;
 
     if (response.local_results && response.local_results.length > 0) {
       const firstResult = response.local_results[0];
       formatted_address = firstResult.address || formatted_address;
-      
+
       // Parse address to extract city/state
       const addressParts = formatted_address.split(',');
       if (addressParts.length >= 2) {
@@ -146,7 +146,7 @@ const reverseGeocode = async (lat, lng) => {
     console.error('Reverse geocoding error:', error);
     return {
       city: 'Unknown',
-      state: 'Unknown', 
+      state: 'Unknown',
       country: 'India',
       formatted_address: `${lat}, ${lng}`
     };
