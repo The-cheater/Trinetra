@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import authRoutes from './routes/auth.js';
 import contributeRoutes from './routes/contribute.js';
@@ -15,6 +18,32 @@ import commentRoutes from './routes/comments.js';
 
 // Load environment variables
 dotenv.config();
+
+// Environment variable validation
+const requiredEnvVars = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+  'JWT_REFRESH_SECRET',
+  'GOOGLE_MAPS_API_KEY',
+  'NODE_ENV'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
+
+// Set up __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Create uploads directory if it doesn't exist
+const uploadDir = process.env.UPLOAD_PATH || path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log(`📁 Created uploads directory at: ${uploadDir}`);
+}
 
 // Connect to MongoDB
 connectDB();
@@ -36,6 +65,17 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
 // General rate limiting - more lenient for development
 const limiter = rateLimit({
@@ -70,14 +110,6 @@ const contributeLimiter = rateLimit({
     message: 'Too many contribution attempts, please try again later.'
   }
 });
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-frontend-domain.com']
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
-}));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -143,15 +175,26 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log('🗄️ Database: TRINETRA');
-  console.log('🔍 AI Engine: SerpAPI Multi-Source Verification');
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
-  console.log(`📝 Contribute endpoint: http://localhost:${PORT}/api/contribute`);
-  console.log(`🧵 Threads endpoint: http://localhost:${PORT}/api/threads`);
+  console.log(`🌐 CORS Allowed Origin: ${corsOptions.origin}`);
+  console.log(`🔒 Upload Directory: ${uploadDir}`);
+  console.log('\n🔌 Connected Services:');
+  console.log('   🗄️  Database: MongoDB');
+  console.log('   🔍 AI Engine: SerpAPI Multi-Source Verification');
+  console.log('   🗺️  Maps: Google Maps API');
+  console.log('   👁️  Vision: Google Cloud Vision');
+  
+  console.log('\n🌐 API Endpoints:');
+  console.log(`   🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`   🔐 Auth: http://localhost:${PORT}/api/auth/*`);
+  console.log(`   📝 Contribute: http://localhost:${PORT}/api/contribute`);
+  console.log(`   🧵 Threads: http://localhost:${PORT}/api/threads`);
+  console.log(`   🗺️  Routes: http://localhost:${PORT}/api/routes`);
+  console.log(`   👤 Profile: http://localhost:${PORT}/api/profile`);
+  
+  console.log('\n✅ Server is ready to handle requests');
   console.log(`🗺️ Routes endpoint: http://localhost:${PORT}/api/routes`);
   console.log(`👤 Profile endpoint: http://localhost:${PORT}/api/profile/*`);
   console.log(`📍 Location endpoint: http://localhost:${PORT}/api/location/*`);
