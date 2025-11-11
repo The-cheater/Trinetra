@@ -123,7 +123,9 @@ class ApiService {
     data: any = null,
     customHeaders: Record<string, string> = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`;
+    // Remove any leading slashes from endpoint to prevent double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const url = `${this.baseURL}/${cleanEndpoint}`;
     const token = this.getAuthToken();
     
     const headers: Record<string, string> = {
