@@ -93,7 +93,7 @@ class ApiService {
   }
 
   // Set auth token with validation
-  private setAuthToken(token: string): void {
+  public setAuthToken(token: string): void {
     try {
       if (typeof window !== 'undefined' && token) {
         localStorage.setItem('auth_token', token);
@@ -104,7 +104,7 @@ class ApiService {
   }
 
   // Remove auth token with error handling
-  private removeAuthToken(): void {
+  public removeAuthToken(): void {
     try {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
@@ -116,7 +116,7 @@ class ApiService {
     }
   }
 
-  // Enhanced request method with retry logic
+  // Enhanced request method with retry logic and FormData support
   private async request<T>(
     endpoint: string,
     method: string = 'GET',
@@ -185,40 +185,9 @@ class ApiService {
     return headers
   }
 
-  // Generic request method
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-    includeAuth: boolean = true
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`
-    
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        ...this.getHeaders(includeAuth),
-        ...options.headers,
-      },
-    }
-
-    try {
-      const response = await fetch(url, config)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`)
-      }
-
-      return data
-    } catch (error) {
-      console.error(`API Error (${endpoint}):`, error)
-      throw error
-    }
-  }
-
   // GET request
   async get<T>(endpoint: string, includeAuth: boolean = true): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'GET' }, includeAuth)
+    return this.request<T>(endpoint, 'GET', null, includeAuth ? {} : { 'Authorization': '' })
   }
 
   // POST request
@@ -227,17 +196,16 @@ class ApiService {
     data?: any, 
     includeAuth: boolean = true
   ): Promise<ApiResponse<T>> {
-    const body = data instanceof FormData ? data : JSON.stringify(data)
-    const headers: Record<string, string> = data instanceof FormData ? {} : { 'Content-Type': 'application/json' }
+    const headers: Record<string, string> = {}
+    if (!(data instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
+    }
     
     return this.request<T>(
       endpoint,
-      {
-        method: 'POST',
-        body,
-        headers,
-      },
-      includeAuth
+      'POST',
+      data,
+      includeAuth ? headers : { ...headers, 'Authorization': '' }
     )
   }
 
@@ -249,17 +217,15 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     return this.request<T>(
       endpoint,
-      {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      },
-      includeAuth
+      'PUT',
+      data,
+      includeAuth ? {} : { 'Authorization': '' }
     )
   }
 
   // DELETE request
   async delete<T>(endpoint: string, includeAuth: boolean = true): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'DELETE' }, includeAuth)
+    return this.request<T>(endpoint, 'DELETE', null, includeAuth ? {} : { 'Authorization': '' })
   }
 
   // Authentication methods
