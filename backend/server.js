@@ -69,7 +69,9 @@ app.use(helmet());
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://trinetra-psi.vercel.app'
+  'https://trinetra-psi.vercel.app',
+  'https://trinetra-3.onrender.com',
+  /^https:\/\/.*\.onrender\.com$/
 ];
 
 const corsOptions = {
@@ -77,7 +79,15 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) === -1) {
+    // Check if origin matches any allowed origin (including regex patterns)
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+    
+    if (!isAllowed) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       console.warn(`CORS blocked: ${origin}`);
       return callback(new Error(msg), false);

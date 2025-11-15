@@ -78,9 +78,9 @@ const BottomNavigation = ({ current, onNavigate }: BottomNavigationProps) => {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '32px',
+                    left: 0,
+                    right: 0,
+                    width: '100%',
                     height: '3px',
                     backgroundColor: '#1d9bf0',
                     borderRadius: '0 0 var(--radius-sm) var(--radius-sm)'

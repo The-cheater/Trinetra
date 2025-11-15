@@ -52,16 +52,26 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
           }
           setCurrentLocation(coords)
           
-          // Reverse geocode using Nominatim (free alternative)
+          // Reverse geocode using LocationIQ
           try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`
-            )
-            const data = await response.json()
-            if (data.display_name) {
+            const apiKey = process.env.NEXT_PUBLIC_LOCATION_IQ_API_KEY || process.env.LOCATION_IQ_API_KEY || 'pk.4f49aa0c13f60257d2046ffad6335e2d'
+            if (!apiKey) {
               setFormData(prev => ({
                 ...prev,
-                locationName: data.display_name.split(',')[0] || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+              }))
+              return
+            }
+            
+            const response = await fetch(
+              `https://us1.locationiq.com/v1/reverse.php?key=${apiKey}&lat=${coords.lat}&lon=${coords.lng}&format=json&addressdetails=1`
+            )
+            const data = await response.json()
+            if (data.display_name || data.address) {
+              const locationName = data.address?.name || data.address?.road || data.display_name?.split(',')[0] || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+              setFormData(prev => ({
+                ...prev,
+                locationName: locationName
               }))
             }
           } catch (error) {
@@ -85,8 +95,14 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
     
     setIsSearching(true)
     try {
+      const apiKey = process.env.NEXT_PUBLIC_LOCATION_IQ_API_KEY || process.env.LOCATION_IQ_API_KEY || 'pk.4f49aa0c13f60257d2046ffad6335e2d'
+      if (!apiKey) {
+        toast.error('LocationIQ API key not configured')
+        return
+      }
+      
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`
+        `https://us1.locationiq.com/v1/search.php?key=${apiKey}&q=${encodeURIComponent(query)}&countrycodes=in&limit=5&format=json&addressdetails=1`
       )
       const data = await response.json()
       setPlaceSuggestions(data || [])
@@ -469,8 +485,17 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
                     }
                     setCurrentLocation(coords)
                     try {
+                      const apiKey = process.env.NEXT_PUBLIC_LOCATION_IQ_API_KEY || process.env.LOCATION_IQ_API_KEY || 'pk.4f49aa0c13f60257d2046ffad6335e2d'
+                      if (!apiKey) {
+                        setFormData({
+                          ...formData,
+                          locationName: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                        })
+                        return
+                      }
+                      
                       const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`
+                        `https://us1.locationiq.com/v1/reverse.php?key=${apiKey}&lat=${coords.lat}&lon=${coords.lng}&format=json&addressdetails=1`
                       )
                       const data = await response.json()
                       setFormData({

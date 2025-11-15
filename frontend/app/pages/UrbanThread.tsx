@@ -77,7 +77,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     if (!token) return
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/location/update`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/location/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -114,7 +114,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
         headers.Authorization = `Bearer ${token}`
       }
 
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/threads?${queryParams}`
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/threads?${queryParams}`
       const response = await fetch(url, { headers })
       const data = await response.json()
 

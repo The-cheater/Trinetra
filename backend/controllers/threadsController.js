@@ -8,7 +8,7 @@ export const getThreads = async (req, res) => {
     const {
       lat,
       lng,
-      radius = 25000, // 25km default radius for city-level
+      radius = 75000, // 75km default radius for area-level visibility
       category,
       page = 1,
       limit = 20,
@@ -30,13 +30,16 @@ export const getThreads = async (req, res) => {
     }
 
     // Location-based filtering using $geoWithin (fixes the $near error)
+    // Convert radius from meters to radians: Earth's radius ≈ 6378.1 km = 6378100 meters
+    const radiusInRadians = parseInt(radius) / 6378100;
+    
     if (userLocation && userLocation.coordinates) {
       // Use user's saved city location
       query.location = {
         $geoWithin: {
           $centerSphere: [
             userLocation.coordinates, // [lng, lat]
-            parseInt(radius) / 6378100 // Convert meters to radians
+            radiusInRadians // Radius in radians for 75km range
           ]
         }
       };
@@ -46,7 +49,7 @@ export const getThreads = async (req, res) => {
         $geoWithin: {
           $centerSphere: [
             [parseFloat(lng), parseFloat(lat)], // [lng, lat]
-            parseInt(radius) / 6378100 // Convert meters to radians
+            radiusInRadians // Radius in radians for 75km range
           ]
         }
       };

@@ -40,7 +40,7 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -86,7 +86,7 @@ const EditProfile = ({ onNavigate }: EditProfileProps) => {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profile/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

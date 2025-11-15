@@ -869,3 +869,29 @@ html, body, * {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Leaflet Map Styles */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background-color: #e5e5e5;
+  font-family: var(--font-family);
+}
+
+.leaflet-tile-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-control-container {
+  font-family: var(--font-family);
+}
+
+/* Ensure map tiles load properly */
+.leaflet-tile-pane {
+  z-index: 2;
+}
+
+.leaflet-overlay-pane {
+  z-index: 4;
+}
