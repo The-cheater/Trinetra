@@ -32,7 +32,20 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
   
   // Credibility popup state
   const [showCredibilityPopup, setShowCredibilityPopup] = useState(false)
-  const [credibilityData, setCredibilityData] = useState<Record<string, unknown> | null>(null)
+  const [credibilityData, setCredibilityData] = useState<{
+    confidence_score: number
+    ai_score: number
+    vision_score?: number | null
+    status: string
+    vision_analysis?: {
+      labels: Array<{ name: string; confidence: number }>
+      objects_detected: number
+      text_detected: boolean
+      safety_rating: string
+      processing_time: number
+    } | null
+    user_credibility_updated?: number | null
+  } | null>(null)
 
   const categories = [
     { id: 'Traffic', name: 'Traffic', icon: Car, color: '#F4212E' },
@@ -684,11 +697,13 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
       </div>
 
       {/* Credibility Popup */}
-      <CredibilityPopup
-        isOpen={showCredibilityPopup}
-        onClose={handleCredibilityPopupClose}
-        data={credibilityData}
-      />
+      {showCredibilityPopup && credibilityData && (
+        <CredibilityPopup
+          isOpen={showCredibilityPopup}
+          onClose={handleCredibilityPopupClose}
+          data={credibilityData}
+        />
+      )}
 
       {/* Fixed Bottom Navigation */}
       <BottomNavigation current="contribute" onNavigate={onNavigate} />

@@ -68,10 +68,6 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     }
   }, [])
 
-  useEffect(() => {
-    fetchIncidents()
-  }, [fetchIncidents])
-
   const updateUserLocation = async (lat: number, lng: number) => {
     const token = localStorage.getItem('access_token')
     if (!token) return
@@ -129,6 +125,10 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
       setIsLoading(false)
     }
   }, [activeFilter, currentLocation, useCityFilter])
+
+  useEffect(() => {
+    fetchIncidents()
+  }, [fetchIncidents])
 
   const fetchComments = async (postId: string) => {
     try {

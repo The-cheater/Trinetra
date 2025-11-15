@@ -583,7 +583,7 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
                         <Image size={48} style={{ 
                           marginBottom: '16px',
                           color: isDark ? '#444' : '#ccc'
-                        }} />
+                        }} aria-label="No image available" />
                         <p style={{ 
                           margin: 0,
                           fontSize: '0.9rem'

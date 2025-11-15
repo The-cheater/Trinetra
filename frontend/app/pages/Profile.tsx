@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Clock, MapPin, LogOut, CheckCircle, AlertCircle, Sun, Moon, Edit } from 'lucide-react'
+import { User as _User, Clock, MapPin, LogOut, CheckCircle, AlertCircle, Sun, Moon, Edit } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -17,7 +17,30 @@ interface ProfileProps {
 const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
   const { isDark, toggleTheme } = useTheme()
   const [activeTab, setActiveTab] = useState('stats')
-  const [profileData, setProfileData] = useState<{ user?: { name: string; email: string; reports_submitted: number; reports_verified: number; avg_credibility_score: number }; recentPosts?: unknown[]; analytics?: unknown } | null>(null)
+  const [profileData, setProfileData] = useState<{ 
+    user?: { 
+      name: string; 
+      email: string; 
+      userId?: string;
+      stats?: {
+        reports_submitted: number;
+        reports_verified: number;
+        avg_credibility_score: number;
+      }
+    }; 
+    recentPosts?: Array<{
+      _id: string;
+      category: string;
+      description: string;
+      status: string;
+      createdAt: string;
+      locationName?: string;
+    }>;
+    analytics?: {
+      successRate: number;
+      totalContributions: number;
+    }
+  } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -349,8 +372,8 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
 
         {activeTab === 'recent' && (
           <div>
-            {profileData?.recentPosts?.length > 0 ? (
-              profileData.recentPosts.map((report: { _id: string; category: string; description: string; status: string; createdAt: string }, index: number) => {
+            {profileData?.recentPosts && profileData.recentPosts.length > 0 ? (
+              profileData.recentPosts.map((report: { _id: string; category: string; description: string; status: string; createdAt: string; locationName?: string }, index: number) => {
                 const StatusIcon = getStatusIcon(report.status)
                 return (
                   <div
@@ -380,7 +403,7 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
                         color: isDark ? '#888' : '#666',
                         fontSize: '0.9rem'
                       }}>
-                        {report.locationName} • {new Date(report.createdAt).toLocaleDateString()}
+                        {report.locationName || 'Unknown Location'} • {new Date(report.createdAt).toLocaleDateString()}
                       </p>
                       <div style={{
                         marginTop: 'var(--spacing-xs)',

@@ -12,7 +12,7 @@ import L from 'leaflet'
 
 // Fix for default marker icons in Next.js
 if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl
+  delete (L.Icon.Default.prototype as { _getIconUrl?: () => string })._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -81,7 +81,12 @@ interface RouteData {
   safety_score?: string
   safety_features?: string[]
   eco_features?: string[]
-  environmental_impact?: any
+  environmental_impact?: {
+    carbon_emissions: number
+    air_quality_index: number
+    noise_pollution_level: number
+    green_space_ratio: number
+  }
   incidents_on_route?: number
   path_points?: [number, number][]
 }

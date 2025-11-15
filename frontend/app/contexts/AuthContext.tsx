@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const decodedToken = storedToken ? parseJwt(storedToken) : null;
           const userId = decodedToken?.sub?.toString() ?? '';
           const username = decodedToken?.username?.toString() ?? '';
-          const role = decodedToken?.role?.toString() ?? '';
+          const _role = decodedToken?.role?.toString() ?? '';
           setToken(storedToken);
           setUser({
             userId,
