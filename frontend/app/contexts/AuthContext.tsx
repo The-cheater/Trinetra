@@ -59,14 +59,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to decode JWT and check expiration
-  const parseJwt = (token: string): { exp?: number; [key: string]: unknown } => {
+  const parseJwt = (token: string): { [key: string]: unknown; exp?: number } | null => {
     try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(jsonPayload);
+      return JSON.parse(atob(token.split('.')[1]));
     } catch (error) {
       console.error('Error parsing JWT:', error);
       return null;
@@ -128,17 +123,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else {
           // Token is still valid
-          const decoded = parseJwt(storedToken);
-          if (decoded) {
-            setToken(storedToken);
-            setUser({
-              userId: decoded.userId || '',
-              name: decoded.name || '',
-              email: decoded.email || '',
-              credibility_score: 75,
-              reports_submitted: 0
-            });
-          }
+          const decodedToken = storedToken ? parseJwt(storedToken) : null;
+          const userId = decodedToken?.sub?.toString() ?? '';
+          const username = decodedToken?.username?.toString() ?? '';
+          const role = decodedToken?.role?.toString() ?? '';
+          setToken(storedToken);
+          setUser({
+            userId,
+            name: username,
+            email: '',
+            credibility_score: 75,
+            reports_submitted: 0
+          });
         }
       }
       
