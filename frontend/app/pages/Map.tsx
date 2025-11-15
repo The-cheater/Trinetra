@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Search, Navigation, Car, Shield, AlertTriangle, Locate, Clock, DollarSign, Zap, Leaf, Route, Target } from 'lucide-react'
+import { MapPin, Search, Shield, AlertTriangle, Locate, Clock, DollarSign, Zap, Leaf, Route, Target } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
@@ -25,6 +25,35 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
 const Polyline = dynamic(() => import('react-leaflet').then(mod => mod.Polyline), { ssr: false })
+
+// MapAutoZoom component - must be inside MapContainer
+const MapAutoZoomComponent = dynamic(() => {
+  return import('react-leaflet').then((mod) => {
+    const { useMap } = mod
+    return function MapAutoZoom({ bounds }: { bounds: [[number, number], [number, number]] | null }) {
+      const map = useMap()
+      
+      useEffect(() => {
+        if (map && bounds) {
+          const timer = setTimeout(() => {
+            try {
+              const latLngBounds = L.latLngBounds(bounds)
+              map.fitBounds(latLngBounds, {
+                padding: [50, 50],
+                maxZoom: 12
+              })
+            } catch (error) {
+              console.log('Auto-zoom failed:', error)
+            }
+          }, 500)
+          return () => clearTimeout(timer)
+        }
+      }, [map, bounds])
+      
+      return null
+    }
+  })
+}, { ssr: false })
 
 type Page = 'home' | 'maps' | 'contribute' | 'profile'
 
@@ -79,7 +108,6 @@ const Map = ({ onNavigate }: MapProps) => {
   // Refs for click outside detection and map control
   const originContainerRef = useRef<HTMLDivElement>(null)
   const destinationContainerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
 
   const routeOptions = [
     { 
@@ -183,14 +211,17 @@ const Map = ({ onNavigate }: MapProps) => {
       if (!response.ok) throw new Error('Geocoding failed')
 
       const data = await response.json()
-      return data.map((item: any) => ({
-        place_id: item.place_id || item.osm_id || Math.random().toString(),
-        display_name: item.display_name || `${item.address?.name || ''} ${item.address?.road || ''} ${item.address?.city || ''}`.trim(),
-        lat: item.lat,
-        lon: item.lon,
-        type: item.type || item.class || 'location',
-        importance: item.importance || 0
-      }))
+      return data.map((item: Record<string, unknown>) => {
+        const address = item.address as Record<string, unknown> | undefined
+        return {
+          place_id: (item.place_id as string) || (item.osm_id as string) || Math.random().toString(),
+          display_name: (item.display_name as string) || `${address?.name || ''} ${address?.road || ''} ${address?.city || ''}`.trim(),
+          lat: String(item.lat),
+          lon: String(item.lon),
+          type: (item.type as string) || (item.class as string) || 'location',
+          importance: item.importance || 0
+        }
+      })
     } catch (error) {
       console.error('Geocoding error:', error)
       return []
@@ -346,7 +377,7 @@ const Map = ({ onNavigate }: MapProps) => {
   }
 
   // Calculate routes using LocationIQ Directions API
-  const calculateRoutes = async () => {
+  const calculateRoutes = useCallback(async () => {
     if (!origin || !destination) {
       setError('Please set both origin and destination')
       return
@@ -382,7 +413,7 @@ const Map = ({ onNavigate }: MapProps) => {
       ])
 
       // Process LocationIQ route response
-      let locationIQRoutes: any = null
+      let locationIQRoutes: { routes?: Array<{ geometry?: { coordinates: [number, number][] }, distance: number, duration: number }> } | null = null
       if (locationIQResponse.status === 'fulfilled' && locationIQResponse.value.ok) {
         try {
           locationIQRoutes = await locationIQResponse.value.json()
@@ -398,9 +429,11 @@ const Map = ({ onNavigate }: MapProps) => {
       }
 
       // Process backend response for incidents
-      let backendData: any = null
+      let backendData: { success?: boolean; data?: { [key: string]: RouteData } & { incidents_count?: number } } | null = null
+      let backendRoutes: { [key: string]: RouteData } | undefined = undefined
       if (backendResponse.status === 'fulfilled' && backendResponse.value.ok) {
         backendData = await backendResponse.value.json()
+        backendRoutes = backendData?.data
       }
 
       // Combine LocationIQ routes with backend incident data
@@ -408,7 +441,7 @@ const Map = ({ onNavigate }: MapProps) => {
         const processedRoutes: { [key: string]: RouteData } = {}
         
         // Process each route from LocationIQ
-        locationIQRoutes.routes.forEach((route: any, index: number) => {
+        locationIQRoutes.routes.forEach((route, index: number) => {
           const routeType = index === 0 ? 'fastest' : index === 1 ? 'eco' : 'safest'
           
           // Extract path points from GeoJSON geometry
@@ -438,7 +471,7 @@ const Map = ({ onNavigate }: MapProps) => {
           const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 
           // Get incident data from backend if available
-          const backendRoute = backendData?.success ? backendData.data[routeType] : null
+          const backendRoute = backendData?.success && backendData.data ? backendData.data[routeType] : null
           const incidentsCount = backendRoute?.incidents_on_route || 0
 
           processedRoutes[routeType] = {
@@ -460,9 +493,7 @@ const Map = ({ onNavigate }: MapProps) => {
         })
 
         // If we have fewer than 3 routes, create additional route types using backend data
-        if (Object.keys(processedRoutes).length < 3 && backendData?.success) {
-          const backendRoutes = backendData.data
-          
+        if (Object.keys(processedRoutes).length < 3 && backendData?.success && backendRoutes) {
           if (!processedRoutes.fastest && backendRoutes.fastest) {
             processedRoutes.fastest = {
               ...backendRoutes.fastest,
@@ -493,7 +524,7 @@ const Map = ({ onNavigate }: MapProps) => {
         setRoutes(processedRoutes)
         console.log('Routes set:', Object.keys(processedRoutes), processedRoutes)
         
-        if (backendData?.success && backendData.data.incidents_count > 0) {
+        if (backendData?.success && backendData.data && backendData.data.incidents_count && backendData.data.incidents_count > 0) {
           console.log(`Routes calculated. ${backendData.data.incidents_count} incidents detected on route corridors.`)
         }
       } else if (backendData?.success) {
@@ -527,7 +558,7 @@ const Map = ({ onNavigate }: MapProps) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [origin, destination])
 
   // Auto-calculate routes when both origin and destination are set
   useEffect(() => {
@@ -538,37 +569,8 @@ const Map = ({ onNavigate }: MapProps) => {
       
       return () => clearTimeout(timer)
     }
-  }, [origin, destination])
+  }, [origin, destination, calculateRoutes])
 
-  // Component to handle auto-zoom when routes are calculated
-  // This must be inside MapContainer to use useMap hook
-  const MapAutoZoom = ({ bounds }: { bounds: [[number, number], [number, number]] | null }) => {
-    if (typeof window === 'undefined') return null
-    
-    // Dynamically import useMap only when needed
-    const useMapHook = require('react-leaflet').useMap
-    const map = useMapHook()
-    
-    useEffect(() => {
-      if (map && bounds) {
-        const timer = setTimeout(() => {
-          try {
-            const L = require('leaflet')
-            const latLngBounds = L.latLngBounds(bounds)
-            map.fitBounds(latLngBounds, {
-              padding: [50, 50],
-              maxZoom: 12
-            })
-          } catch (error) {
-            console.log('Auto-zoom failed:', error)
-          }
-        }, 500)
-        return () => clearTimeout(timer)
-      }
-    }, [map, bounds])
-    
-    return null
-  }
 
   // Click outside to close suggestions
   useEffect(() => {
@@ -936,7 +938,7 @@ const Map = ({ onNavigate }: MapProps) => {
               />
               
               {/* Auto-zoom component */}
-              {routes && calculateRouteBounds() && <MapAutoZoom bounds={calculateRouteBounds() as [[number, number], [number, number]]} />}
+              {routes && calculateRouteBounds() && <MapAutoZoomComponent bounds={calculateRouteBounds() as [[number, number], [number, number]]} />}
               
               {/* Origin Marker */}
               <Marker 
@@ -1023,7 +1025,7 @@ const Map = ({ onNavigate }: MapProps) => {
               return (
                 <motion.button
                   key={option.id}
-                  onClick={() => setSelectedRoute(option.id as any)}
+                  onClick={() => setSelectedRoute(option.id as 'fastest' | 'eco' | 'safest')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   style={{

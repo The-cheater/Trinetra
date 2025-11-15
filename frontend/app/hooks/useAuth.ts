@@ -1,4 +1,3 @@
-import { useContext } from 'react'
 import { useAuth as useAuthContext } from '../contexts/AuthContext'
 
 // Re-export useAuth for convenience

@@ -300,7 +300,7 @@ const Login = ({ onLogin, onNavigateToSignup }: LoginProps) => {
           marginTop: 'var(--spacing-xl)',
           color: isDark ? '#888' : '#666'
         }}>
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <button
             onClick={onNavigateToSignup}
             style={{

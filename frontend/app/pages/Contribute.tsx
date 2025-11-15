@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Camera, AlertTriangle, Construction, Car, MapPin, Send, Upload, Search, Locate, Brain } from 'lucide-react'
+import { Camera, AlertTriangle, Construction, Car, MapPin, Search, Locate, Brain } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import CredibilityPopup from '../components/CredibilityPopup'
@@ -27,12 +27,12 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [placeSuggestions, setPlaceSuggestions] = useState<any[]>([])
+  const [placeSuggestions, setPlaceSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string; place_id?: string }>>([])
   const [isSearching, setIsSearching] = useState(false)
   
   // Credibility popup state
   const [showCredibilityPopup, setShowCredibilityPopup] = useState(false)
-  const [credibilityData, setCredibilityData] = useState<any>(null)
+  const [credibilityData, setCredibilityData] = useState<Record<string, unknown> | null>(null)
 
   const categories = [
     { id: 'Traffic', name: 'Traffic', icon: Car, color: '#F4212E' },
@@ -114,7 +114,7 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
     }
   }
 
-  const selectPlace = async (place: any) => {
+  const selectPlace = async (place: { display_name: string; lat: string; lon: string }) => {
     setFormData(prev => ({ ...prev, locationName: place.display_name }))
     setPlaceSuggestions([])
     setCurrentLocation({
@@ -509,7 +509,7 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
                       })
                     }
                   },
-                  (error) => {
+                  (_error) => {
                     toast.error('Unable to get current location')
                   }
                 )

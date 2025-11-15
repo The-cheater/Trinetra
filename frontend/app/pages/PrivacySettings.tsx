@@ -24,7 +24,7 @@ interface PrivacySettingsProps {
 }
 
 const PrivacySettings = ({ onNavigate }: PrivacySettingsProps) => {
-  const { isDark } = useTheme()
+  const { isDark: _isDark } = useTheme()
   const [showSuccess, setShowSuccess] = useState(false)
 
   // Privacy settings state

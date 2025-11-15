@@ -1,5 +1,5 @@
 // Central API service with JWT handling
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   message: string
   data?: T
@@ -120,7 +120,7 @@ class ApiService {
   private async request<T>(
     endpoint: string,
     method: string = 'GET',
-    data: any = null,
+    data: unknown = null,
     customHeaders: Record<string, string> = {}
   ): Promise<ApiResponse<T>> {
     // Remove any leading slashes from endpoint to prevent double slashes
@@ -195,7 +195,7 @@ class ApiService {
   // POST request
   async post<T>(
     endpoint: string, 
-    data?: any, 
+    data?: unknown, 
     includeAuth: boolean = true
   ): Promise<ApiResponse<T>> {
     const headers: Record<string, string> = {}
@@ -214,7 +214,7 @@ class ApiService {
   // PUT request
   async put<T>(
     endpoint: string, 
-    data?: any, 
+    data?: unknown, 
     includeAuth: boolean = true
   ): Promise<ApiResponse<T>> {
     return this.request<T>(

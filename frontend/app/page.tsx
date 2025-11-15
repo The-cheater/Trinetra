@@ -18,7 +18,7 @@ type Page = 'video' | 'login' | 'signup' | 'home' | 'maps' | 'contribute' | 'pro
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<Page>('video')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [_isAuthenticated, setIsAuthenticated] = useState(false)
 
   const handleVideoComplete = () => {
     setCurrentPage('login')

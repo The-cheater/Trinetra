@@ -73,18 +73,19 @@ export const useLocation = (options: UseLocationOptions = {}) => {
 
       setPermissionStatus('granted')
       return coords
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const geolocationError = error as GeolocationPositionError
       let errorMessage = 'Unable to retrieve location'
       
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
+      switch (geolocationError.code) {
+        case geolocationError.PERMISSION_DENIED:
           errorMessage = 'Location access denied by user'
           setPermissionStatus('denied')
           break
-        case error.POSITION_UNAVAILABLE:
+        case geolocationError.POSITION_UNAVAILABLE:
           errorMessage = 'Location information is unavailable'
           break
-        case error.TIMEOUT:
+        case geolocationError.TIMEOUT:
           errorMessage = 'Location request timed out'
           break
       }
@@ -187,10 +188,10 @@ export const useLocation = (options: UseLocationOptions = {}) => {
     if ('permissions' in navigator) {
       try {
         const result = await navigator.permissions.query({ name: 'geolocation' })
-        setPermissionStatus(result.state as any)
+        setPermissionStatus(result.state as 'granted' | 'denied' | 'prompt')
         
         result.addEventListener('change', () => {
-          setPermissionStatus(result.state as any)
+          setPermissionStatus(result.state as 'granted' | 'denied' | 'prompt')
         })
       } catch (error) {
         console.error('Error checking location permission:', error)

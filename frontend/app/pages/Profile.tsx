@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Shield, Award, Clock, MapPin, Settings, LogOut, TrendingUp, CheckCircle, AlertCircle, Sun, Moon, Edit } from 'lucide-react'
+import { User, Clock, MapPin, LogOut, CheckCircle, AlertCircle, Sun, Moon, Edit } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -17,7 +17,7 @@ interface ProfileProps {
 const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
   const { isDark, toggleTheme } = useTheme()
   const [activeTab, setActiveTab] = useState('stats')
-  const [profileData, setProfileData] = useState<any>(null)
+  const [profileData, setProfileData] = useState<{ user?: { name: string; email: string; reports_submitted: number; reports_verified: number; avg_credibility_score: number }; recentPosts?: unknown[]; analytics?: unknown } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -350,7 +350,7 @@ const Profile = ({ onSignOut, onNavigate }: ProfileProps) => {
         {activeTab === 'recent' && (
           <div>
             {profileData?.recentPosts?.length > 0 ? (
-              profileData.recentPosts.map((report: any, index: number) => {
+              profileData.recentPosts.map((report: { _id: string; category: string; description: string; status: string; createdAt: string }, index: number) => {
                 const StatusIcon = getStatusIcon(report.status)
                 return (
                   <div

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Car, Construction, AlertTriangle, MapPin, Shield, Users, TrendingUp } from 'lucide-react'
+import { Car, Construction, AlertTriangle, Shield, Users, TrendingUp } from 'lucide-react'
 import Logo from '../components/Logo'
 
 type Page = 'home' | 'maps' | 'contribute' | 'profile'

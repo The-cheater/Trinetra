@@ -172,7 +172,7 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id as 'overview' | 'vision' | 'evidence' | 'comments')}
                     style={{
                       flex: 1,
                       padding: '12px 8px',
@@ -578,7 +578,7 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
                         padding: '40px 20px',
                         color: isDark ? '#888' : '#666'
                       }}>
-                        <Image size={48} style={{ 
+                        <Image size={48} alt="" style={{ 
                           marginBottom: '16px',
                           color: isDark ? '#444' : '#ccc'
                         }} />
