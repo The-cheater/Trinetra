@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Bell, AlertTriangle, Construction, Car, MapPin, ThumbsUp, ThumbsDown, MessageCircle, Share2, CheckCircle, Filter, TrendingUp, Clock, Users, Locate, Camera, X } from 'lucide-react'
+import { AlertTriangle, Construction, Car, MapPin, ThumbsUp, MessageCircle, Share2, CheckCircle, Clock, Locate, Camera, X } from 'lucide-react'
 import BottomNavigation from '../components/BottomNavigation'
 import Logo from '../components/Logo'
 import { useTheme } from '../contexts/ThemeContext'
@@ -70,7 +70,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
 
   useEffect(() => {
     fetchIncidents()
-  }, [activeFilter, currentLocation, useCityFilter])
+  }, [fetchIncidents])
 
   const updateUserLocation = async (lat: number, lng: number) => {
     const token = localStorage.getItem('access_token')
@@ -90,7 +90,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     }
   }
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = useCallback(async () => {
     setIsLoading(true)
     setError('')
 
@@ -109,7 +109,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
       }
 
       const token = localStorage.getItem('access_token')
-      const headers: any = {}
+      const headers: Record<string, string> = {}
       if (token) {
         headers.Authorization = `Bearer ${token}`
       }
@@ -128,7 +128,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [activeFilter, currentLocation, useCityFilter])
 
   const fetchComments = async (postId: string) => {
     try {
@@ -500,6 +500,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
                       overflow: 'hidden',
                       border: `1px solid ${isDark ? '#333' : '#eee'}`
                     }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`${process.env.NEXT_PUBLIC_API_URL}${incident.photo_url}`}
                         alt="Incident evidence"

@@ -1,5 +1,5 @@
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   message: string
   data?: T
@@ -47,7 +47,7 @@ export interface Post {
   confidence_score: number
   status: IncidentStatus
   verification_reason?: string
-  evidence: any[]
+  evidence: ConfidenceEvidence[]
   author?: string
   author_city?: string
   distance_km?: number
@@ -255,14 +255,17 @@ export interface ConfidenceBreakdown {
 
 export interface ConfidenceEvidence {
   source: string
-  [key: string]: any
+  score?: number
+  details?: string
+  timestamp?: string
+  [key: string]: unknown
 }
 
 // Error Types
 export interface ApiError {
   message: string
   code?: string | number
-  details?: any
+  details?: Record<string, unknown>
 }
 
 // Utility Types
@@ -270,7 +273,7 @@ export type Page = 'home' | 'maps' | 'contribute' | 'profile' | 'edit-profile' |
 
 export interface NavigationItem {
   id: string
-  icon: any
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>
   label: string
   page: Page
 }
