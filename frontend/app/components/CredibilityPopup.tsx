@@ -44,6 +44,12 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
       <AlertCircle size={18} style={{ color: '#ffd400' }} />
   }
 
+  const tabs = [
+    { id: 'overview', name: 'Overview', icon: CheckCircle },
+    { id: 'details', name: 'AI Details', icon: Brain },
+    { id: 'vision', name: 'Vision', icon: Eye }
+  ] as const
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -162,17 +168,13 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
               borderBottom: `1px solid ${isDark ? '#333' : '#eee'}`,
               backgroundColor: isDark ? '#111' : '#fff'
             }}>
-              {[
-                { id: 'overview', name: 'Overview', icon: CheckCircle },
-                { id: 'details', name: 'AI Details', icon: Brain },
-                { id: 'vision', name: 'Vision', icon: Eye }
-              ].map((tab) => {
+              {tabs.map((tab) => {
                 const IconComponent = tab.icon
                 const isActive = activeTab === tab.id
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as 'overview' | 'vision' | 'evidence' | 'comments')}
+                    onClick={() => setActiveTab(tab.id)}
                     style={{
                       flex: 1,
                       padding: '12px 8px',
@@ -578,7 +580,7 @@ const CredibilityPopup = ({ isOpen, onClose, data }: CredibilityPopupProps) => {
                         padding: '40px 20px',
                         color: isDark ? '#888' : '#666'
                       }}>
-                        <Image size={48} alt="" style={{ 
+                        <Image size={48} style={{ 
                           marginBottom: '16px',
                           color: isDark ? '#444' : '#ccc'
                         }} />
