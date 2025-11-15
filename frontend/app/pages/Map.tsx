@@ -401,7 +401,7 @@ const Map = ({ onNavigate }: MapProps) => {
 
       // Get route from backend for incidents data, but use LocationIQ for actual routing
       const [backendResponse, locationIQResponse] = await Promise.allSettled([
-        fetch('/api/routes', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/routes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ origin, destination })

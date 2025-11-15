@@ -73,7 +73,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
     if (!token) return
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/location/update`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/location/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -110,7 +110,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
         headers.Authorization = `Bearer ${token}`
       }
 
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/threads?${queryParams}`
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/threads?${queryParams}`
       const response = await fetch(url, { headers })
       const data = await response.json()
 
@@ -132,7 +132,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
 
   const fetchComments = async (postId: string) => {
     try {
-      const response = await fetch(`/api/comments/${postId}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${postId}`)
       const data = await response.json()
       
       if (data.success) {
@@ -154,7 +154,7 @@ const UrbanThread = ({ onNavigate }: UrbanThreadProps) => {
 
     setIsSubmittingComment(true)
     try {
-      const response = await fetch('/api/comments', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

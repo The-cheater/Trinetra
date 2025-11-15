@@ -28,7 +28,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
   const fetchComments = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/comments/${postId}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${postId}`)
       const data = await response.json()
       
       if (data.success) {
@@ -58,7 +58,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
 
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/comments', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ const CommentSection = ({ postId, onClose }: CommentSectionProps) => {
     if (!token) return
 
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

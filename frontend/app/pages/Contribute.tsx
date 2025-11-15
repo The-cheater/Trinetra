@@ -207,7 +207,7 @@ const Contribute = ({ onNavigate }: ContributeProps) => {
         formDataToSend.append('photo', selectedPhoto)
       }
 
-      const response = await fetch('/api/contribute', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/contribute`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

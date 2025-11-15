@@ -104,7 +104,7 @@ export const useLocation = (options: UseLocationOptions = {}) => {
         return false
       }
 
-      const response = await apiService.put<LocationUpdateResponse>('/api/location/update', coords)
+      const response = await apiService.put<LocationUpdateResponse>('/location/update', coords)
       
       if (response.success && response.data) {
         setLocation({
@@ -173,7 +173,7 @@ export const useLocation = (options: UseLocationOptions = {}) => {
 
     try {
       const response = await apiService.get(
-        `/api/routes/nearby?lat=${location.coordinates.lat}&lng=${location.coordinates.lng}&query=${query}`
+        `/routes/nearby?lat=${location.coordinates.lat}&lng=${location.coordinates.lng}&query=${query}`
       )
       
       return response.data || []

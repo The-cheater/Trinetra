@@ -232,7 +232,7 @@ class ApiService {
 
   // Authentication methods
   async login(email: string, password: string): Promise<ApiResponse<AuthTokens>> {
-    const response = await this.post<AuthTokens>('/api/auth/login', { email, password }, false)
+    const response = await this.post<AuthTokens>('/auth/login', { email, password }, false)
     
     if (response.success && response.data) {
       this.setAuthToken(response.data.token)
@@ -244,7 +244,7 @@ class ApiService {
   }
 
   async register(name: string, email: string, password: string): Promise<ApiResponse<AuthTokens>> {
-    const response = await this.post<AuthTokens>('/api/auth/register', { name, email, password }, false)
+    const response = await this.post<AuthTokens>('/auth/register', { name, email, password }, false)
     
     if (response.success && response.data) {
       this.setAuthToken(response.data.token)
