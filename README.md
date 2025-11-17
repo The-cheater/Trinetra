@@ -857,7 +857,7 @@ MONGODB_URI=mongodb://staging-cluster.mongodb.net/TRINETRA_STAGING
 ```env
 NODE_ENV=production
 PORT=8080
-MONGODB_URI=mongodb+srv://user:pass@prod-cluster.mongodb.net/TRINETRA_PROD
+MONGODB_URI=mongodb+srv://user:pass@prod-cluster.mongodb.net/
 ```
 
 ***
