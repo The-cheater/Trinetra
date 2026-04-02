@@ -1,4 +1,4 @@
-# 🌐 TRINETRA - Urban Safety & Community Intelligence Platform
+#  TRINETRA - Urban Safety & Community Intelligence Platform
 
 <div align="center">
 <img src="photos/logo.png" alt="TRINETRA Logo" width="200"/>
@@ -17,7 +17,7 @@
 
 ---
 
-## 🌟 Overview
+##  Overview
 
 <div align="center">
 <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&width=600&lines=Real-time+Community+Safety;AI-Powered+Incident+Verification;Smart+Route+Planning;Community-Driven+Platform" alt="Typing SVG" />
@@ -25,13 +25,13 @@
 
 **TRINETRA** is a cutting-edge, full-stack civic technology platform that revolutionizes urban safety through community engagement. Built with modern technologies and enterprise-grade architecture, it empowers citizens to report, verify, and engage with urban incidents in real-time.
 
-### 🎯 Key Highlights
+###  Key Highlights
 
 <table>
 <tr>
 <td width="50%">
 
-**🚀 Modern Architecture**
+** Modern Architecture**
 - Next.js 14 with App Router
 - Production-ready Node.js backend
 - MongoDB with geospatial indexing
@@ -40,8 +40,7 @@
 
 </td>
 <td width="50%">
-
-**🔒 Enterprise Security**
+** Enterprise Security**
 - JWT authentication with refresh tokens
 - Rate limiting & DDoS protection
 - Input validation & sanitization
@@ -53,7 +52,7 @@
 <tr>
 <td width="50%">
 
-**🤖 AI-Powered Features**
+** AI-Powered Features**
 - Real-time incident verification
 - Confidence scoring algorithm
 - Smart route optimization
@@ -63,7 +62,7 @@
 </td>
 <td width="50%">
 
-**📱 User Experience**
+** User Experience**
 - Mobile-first responsive design
 - Dark/Light theme support
 - Real-time notifications
@@ -76,7 +75,7 @@
 
 ***
 
-## 🎯 Frontend - Next.js Application
+##  Frontend - Next.js Application
 
 <div align="center">
 <img src="https://img.shields.io/badge/Frontend-Next.js%2014-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Frontend">
@@ -85,7 +84,7 @@
 <img src="https://img.shields.io/badge/Animation-Framer%20Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white" alt="Framer Motion">
 </div>
 
-### 📱 Modern Web Application
+###  Modern Web Application
 
 A **mobile-first**, responsive web application built with Next.js 14 (App Router) providing an intuitive interface for community safety engagement. Features smooth animations, real-time updates, and comprehensive theme support.
 
@@ -95,13 +94,13 @@ A **mobile-first**, responsive web application built with Next.js 14 (App Router
 <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=18&duration=2000&pause=500&color=61DAFB&center=true&vCenter=true&width=500&lines=Mobile-First+Design;Real-Time+Updates;Smooth+Animations;Theme+Support" alt="Frontend Features" />
 </div>
 
-### ✨ Key Features
+###  Key Features
 
 <table>
 <tr>
 <td width="33%" align="center">
 
-**🎬 Splash Screen**
+**Splash Screen**
 
 ![Splash](https://img.shields.io/badge/🎬-Animated%20Logo-FF6B6B?style=flat-square)
 
@@ -110,7 +109,7 @@ Animated logo with video introduction and smooth transitions
 </td>
 <td width="33%" align="center">
 
-**🔐 Authentication**
+**Authentication**
 
 ![Auth](https://img.shields.io/badge/🔐-JWT%20Integration-4ECDC4?style=flat-square)
 
@@ -120,7 +119,7 @@ Secure signup/login with JWT integration and session management
 <td width="33%" align="center">
 
 
-**📱 Urban Thread Feed**
+** Urban Thread Feed**
 
 ![Feed](https://img.shields.io/badge/📱-Real--Time%20Feed-45B7D1?style=flat-square)
 
@@ -131,7 +130,7 @@ Community incident reports with filtering and reactions
 <tr>
 <td width="33%" align="center">
 
-**🗺️ Interactive Maps**
+** Interactive Maps**
 
 ![Maps](https://img.shields.io/badge/🗺️-Google%20Maps-96CEB4?style=flat-square)
 
@@ -140,7 +139,7 @@ Smart routing (fastest/eco/safest routes) with real-time data
 </td>
 <td width="33%" align="center">
 
-**📸 Incident Reporting**
+**Incident Reporting**
 
 ![Report](https://img.shields.io/badge/📸-Photo%20Upload-FFEAA7?style=flat-square)
 
@@ -149,7 +148,7 @@ Photo upload, geolocation, and category-based submission
 </td>
 <td width="33%" align="center">
 
-**👤 User Profiles**
+**User Profiles**
 
 ![Profile](https://img.shields.io/badge/👤-Reputation%20System-DDA0DD?style=flat-square)
 
@@ -160,7 +159,7 @@ Statistics, contribution history, and reputation tracking
 <tr>
 <td width="33%" align="center">
 
-**🎨 Theme System**
+** Theme System**
 
 ![Theme](https://img.shields.io/badge/🎨-Dark%2FLight%20Mode-74B9FF?style=flat-square)
 
@@ -169,7 +168,7 @@ Smooth transitions and persistent storage
 </td>
 <td width="33%" align="center">
 
-**📱 Responsive Design**
+** Responsive Design**
 
 ![Responsive](https://img.shields.io/badge/📱-Mobile%20First-00B894?style=flat-square)
 
@@ -178,7 +177,7 @@ Optimized for all device sizes
 </td>
 <td width="33%" align="center">
 
-**⚡ Performance**
+** Performance**
 
 ![Performance](https://img.shields.io/badge/⚡-Optimized-E17055?style=flat-square)
 
@@ -189,7 +188,7 @@ SSR, lazy loading, and code splitting
 </table>
 
 
-### 🛠️ Frontend Technology Stack
+###  Frontend Technology Stack
 
 <div align="center">
 
@@ -209,7 +208,7 @@ SSR, lazy loading, and code splitting
 </div>
 
 
-### 📁 Frontend Architecture
+###  Frontend Architecture
 
 <div align="center">
 <img src="https://img.shields.io/badge/Architecture-Modular-success?style=for-the-badge&logo=react&logoColor=white" alt="Architecture">
@@ -269,7 +268,7 @@ SSR, lazy loading, and code splitting
 ```
 
 
-### 🚀 Quick Start Guide
+###  Quick Start Guide
 
 <div align="center">
 <img src="https://img.shields.io/badge/Setup-Easy-success?style=for-the-badge&logo=npm&logoColor=white" alt="Easy Setup">
